@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  login     String   @unique
+  password  String
+  role      Role
+  createdAt DateTime @default(now())
+}
+
+enum Role {
+  admin
+  dept_3d
+  dept_mold
+  dept_sales
+}
+
+model ProductionModel {
+  id        String   @id @default(cuid())
+  name      String
+  category  String?
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  items     ProductionItem[]
+}
+
+model ProductionItem {
+  id           String    @id @default(cuid())
+  modelId      String
+  model        ProductionModel @relation(fields: [modelId], references: [id])
+  currentStage Stage
+  stageStart   DateTime  @default(now())
+  deadline     DateTime?
+  sampleSent   Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  logs         StageLog[]
+  proposals    Proposal[]
+}
+
+enum Stage {
+  stage_3d
+  stage_mold
+  stage_sales
+}
+
+model StageLog {
+  id               String         @id @default(cuid())
+  productionItemId String
+  productionItem   ProductionItem @relation(fields: [productionItemId], references: [id])
+  stage            Stage
+  startDate        DateTime
+  endDate          DateTime
+  finishedById     String
+}
+
+model Proposal {
+  id               String         @id @default(cuid())
+  productionItemId String
+  productionItem   ProductionItem @relation(fields: [productionItemId], references: [id])
+  clientName       String
+  date             DateTime       @default(now())
+  status           ProposalStatus @default(sent)
+}
+
+enum ProposalStatus {
+  sent
+  won
+  lost
+}

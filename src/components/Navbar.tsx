@@ -1,0 +1,84 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
+import { Bell, Settings, LogOut, Boxes } from "lucide-react";
+
+const NAV_ITEMS = [
+  { href: "/dashboard", label: "Boshqaruv paneli", roles: ["admin", "dept_3d", "dept_mold", "dept_sales"] },
+  { href: "/department/3d", label: "3D bo'limi", roles: ["admin", "dept_3d"] },
+  { href: "/department/mold", label: "Qolip bo'limi", roles: ["admin", "dept_mold"] },
+  { href: "/department/sales", label: "Sotuv bo'limi", roles: ["admin", "dept_sales"] },
+  { href: "/admin/models", label: "Admin", roles: ["admin"] },
+];
+
+export function Navbar() {
+  const pathname = usePathname();
+  const { data: session } = useSession();
+  const role = session?.user?.role;
+
+  const items = NAV_ITEMS.filter((item) => !role || item.roles.includes(role));
+  const initials = session?.user?.name
+    ? session.user.name
+        .split(" ")
+        .map((p) => p[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase()
+    : "";
+
+  return (
+    <div className="sticky top-4 z-20 px-4">
+      <nav className="mx-auto max-w-7xl bg-card rounded-full shadow-sm px-4 py-2.5 flex items-center gap-4">
+        <Link href="/dashboard" className="flex items-center gap-2 pl-1 pr-2 shrink-0">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white">
+            <Boxes size={16} strokeWidth={2} />
+          </span>
+          <span className="font-display font-bold text-sm text-ink hidden sm:inline">Arkon</span>
+        </Link>
+
+        <div className="flex-1 flex items-center justify-center gap-1 overflow-x-auto">
+          {items.map((item) => {
+            const active = pathname?.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                  active ? "bg-ink text-white" : "text-ink/60 hover:bg-bg"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button className="rounded-full p-2 text-ink/50 hover:bg-bg hover:text-ink" aria-label="Bildirishnomalar">
+            <Bell size={17} strokeWidth={1.75} />
+          </button>
+          <button className="rounded-full p-2 text-ink/50 hover:bg-bg hover:text-ink" aria-label="Sozlamalar">
+            <Settings size={17} strokeWidth={1.75} />
+          </button>
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="rounded-full p-2 text-ink/50 hover:bg-bg hover:text-ink"
+            aria-label="Chiqish"
+          >
+            <LogOut size={17} strokeWidth={1.75} />
+          </button>
+          {session?.user && (
+            <span
+              title={session.user.name ?? ""}
+              className="ml-1 flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold"
+            >
+              {initials}
+            </span>
+          )}
+        </div>
+      </nav>
+    </div>
+  );
+}
