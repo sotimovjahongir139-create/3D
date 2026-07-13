@@ -38,14 +38,14 @@ export function Navbar() {
           <span className="font-display font-bold text-sm text-ink hidden sm:inline">Arkon</span>
         </Link>
 
-        <div className="flex-1 flex items-center justify-start sm:justify-center gap-1 overflow-x-auto">
+        <div className="flex-1 min-w-0 flex items-center justify-start sm:justify-center gap-1 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {items.map((item) => {
             const active = pathname?.startsWith(item.href);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`whitespace-nowrap rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors ${
+                className={`shrink-0 whitespace-nowrap rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors ${
                   active ? "bg-ink text-white" : "text-ink/60 hover:bg-bg"
                 }`}
               >
@@ -56,10 +56,10 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-          <button className="rounded-full p-2 text-ink/50 hover:bg-bg hover:text-ink" aria-label="Bildirishnomalar">
+          <button className="hidden sm:inline-flex rounded-full p-2 text-ink/50 hover:bg-bg hover:text-ink" aria-label="Bildirishnomalar">
             <Bell size={17} strokeWidth={1.75} />
           </button>
-          <button className="rounded-full p-2 text-ink/50 hover:bg-bg hover:text-ink" aria-label="Sozlamalar">
+          <button className="hidden sm:inline-flex rounded-full p-2 text-ink/50 hover:bg-bg hover:text-ink" aria-label="Sozlamalar">
             <Settings size={17} strokeWidth={1.75} />
           </button>
           <button
