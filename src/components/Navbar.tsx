@@ -29,8 +29,8 @@ export function Navbar() {
     : "";
 
   return (
-    <div className="sticky top-4 z-20 px-4">
-      <nav className="mx-auto max-w-7xl bg-card rounded-full shadow-sm px-4 py-2.5 flex items-center gap-4">
+    <div className="sticky top-2 sm:top-4 z-20 px-2 sm:px-4">
+      <nav className="mx-auto max-w-7xl bg-card rounded-full shadow-sm px-2 sm:px-4 py-2 sm:py-2.5 flex items-center gap-2 sm:gap-4">
         <Link href="/dashboard" className="flex items-center gap-2 pl-1 pr-2 shrink-0">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white">
             <Boxes size={16} strokeWidth={2} />
@@ -38,14 +38,14 @@ export function Navbar() {
           <span className="font-display font-bold text-sm text-ink hidden sm:inline">Arkon</span>
         </Link>
 
-        <div className="flex-1 flex items-center justify-center gap-1 overflow-x-auto">
+        <div className="flex-1 flex items-center justify-start sm:justify-center gap-1 overflow-x-auto">
           {items.map((item) => {
             const active = pathname?.startsWith(item.href);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                className={`whitespace-nowrap rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors ${
                   active ? "bg-ink text-white" : "text-ink/60 hover:bg-bg"
                 }`}
               >
@@ -55,7 +55,7 @@ export function Navbar() {
           })}
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           <button className="rounded-full p-2 text-ink/50 hover:bg-bg hover:text-ink" aria-label="Bildirishnomalar">
             <Bell size={17} strokeWidth={1.75} />
           </button>

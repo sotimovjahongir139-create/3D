@@ -23,9 +23,9 @@ export function TableCard({
 }) {
   return (
     <div className="bg-card rounded-3xl shadow-sm overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-ink/5">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-4 border-b border-ink/5">
         <div className="flex items-center gap-2">
-          <h3 className="font-display font-bold text-ink">{title}</h3>
+          <h3 className="font-display font-bold text-ink text-sm sm:text-base">{title}</h3>
           {typeof count === "number" && <span className="text-xs text-ink/40">{count} ta</span>}
         </div>
         <div className="flex items-center gap-2">
@@ -35,7 +35,7 @@ export function TableCard({
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Qidirish..."
-              className="rounded-full border border-ink/10 bg-bg pl-8 pr-3 py-1.5 text-xs w-40 focus:border-primary focus:outline-none"
+              className="rounded-full border border-ink/10 bg-bg pl-8 pr-3 py-1.5 text-xs w-28 sm:w-40 focus:border-primary focus:outline-none"
             />
           </div>
           <div className="relative">
@@ -54,7 +54,7 @@ export function TableCard({
           </div>
         </div>
       </div>
-      {children}
+      <div className="overflow-x-auto">{children}</div>
     </div>
   );
 }

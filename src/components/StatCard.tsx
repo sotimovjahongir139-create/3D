@@ -22,12 +22,13 @@ export function StatCard({
 }) {
   if (hero) {
     return (
-      <div className="relative overflow-hidden rounded-2xl bg-primary p-5 text-white">
-        <span className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/20">
-          <Icon size={18} strokeWidth={2} />
+      <div className="relative overflow-hidden rounded-2xl bg-primary p-4 sm:p-5 text-white">
+        <span className="absolute right-3 top-3 sm:right-4 sm:top-4 flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white/20">
+          <Icon size={16} strokeWidth={2} className="sm:hidden" />
+          <Icon size={18} strokeWidth={2} className="hidden sm:block" />
         </span>
-        <div className="font-display text-3xl font-extrabold">{value}</div>
-        <div className="mt-1 text-sm text-white/80">{label}</div>
+        <div className="font-display text-2xl sm:text-3xl font-extrabold">{value}</div>
+        <div className="mt-1 text-xs sm:text-sm text-white/80 truncate pr-8">{label}</div>
       </div>
     );
   }
@@ -35,12 +36,13 @@ export function StatCard({
   const tones = TONE_CLASSES[tone ?? "orange"];
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-card p-5 shadow-sm">
-      <span className={`absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full ${tones.badge}`}>
-        <Icon size={18} strokeWidth={2} className={tones.icon} />
+    <div className="relative overflow-hidden rounded-2xl bg-card p-4 sm:p-5 shadow-sm">
+      <span className={`absolute right-3 top-3 sm:right-4 sm:top-4 flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full ${tones.badge}`}>
+        <Icon size={16} strokeWidth={2} className={`sm:hidden ${tones.icon}`} />
+        <Icon size={18} strokeWidth={2} className={`hidden sm:block ${tones.icon}`} />
       </span>
-      <div className="font-display text-3xl font-extrabold text-ink">{value}</div>
-      <div className="mt-1 text-sm text-ink/50">{label}</div>
+      <div className="font-display text-2xl sm:text-3xl font-extrabold text-ink">{value}</div>
+      <div className="mt-1 text-xs sm:text-sm text-ink/50 truncate pr-8">{label}</div>
     </div>
   );
 }

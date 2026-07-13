@@ -7,7 +7,6 @@ import { Package, AlertTriangle } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { StatCard } from "@/components/StatCard";
 import { TableCard } from "@/components/TableCard";
-import { PageHeader } from "@/components/PageHeader";
 import { HorizontalStageBars } from "@/components/HorizontalStageBars";
 import { SemiDonutGauge } from "@/components/SemiDonutGauge";
 import { itemStatus } from "@/lib/labels";
@@ -70,7 +69,6 @@ export function Dashboard() {
   if (!data) {
     return (
       <div>
-        <PageHeader title="Boshqaruv paneli" subtitle="Ishlab chiqarish jarayoni bo'yicha umumiy holat" />
         <div className="text-sm text-ink/50">Yuklanmoqda...</div>
       </div>
     );
@@ -85,10 +83,8 @@ export function Dashboard() {
   const completionPct = data.totalItems > 0 ? ((data.countsByStage.stage_sales ?? 0) / data.totalItems) * 100 : 0;
 
   return (
-    <div className="space-y-8">
-      <PageHeader title="Boshqaruv paneli" subtitle="Ishlab chiqarish jarayoni bo'yicha umumiy holat" />
-
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div className="space-y-6 sm:space-y-8">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <StatCard label="Jami bandlar" value={data.totalItems} icon={Package} hero />
         {stageCards.map(({ stage, count, meta }) => (
           <StatCard key={stage} label={meta.label} value={count} icon={meta.icon} tone={meta.tone} />
@@ -96,7 +92,7 @@ export function Dashboard() {
       </div>
 
       {isAdmin && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <HorizontalStageBars counts={data.countsByStage} />
 
           <div className="bg-card rounded-3xl shadow-sm p-5">
@@ -117,7 +113,7 @@ export function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         <TableCard
           title="Kechikkan bandlar"
           count={visibleOverdue.length}
