@@ -34,8 +34,13 @@ export async function POST(req: NextRequest) {
 
   const filename = `${randomUUID()}.${ext}`;
   const filepath = path.join(process.cwd(), "public", "uploads", filename);
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(filepath, buffer);
+
+  try {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    await writeFile(filepath, buffer);
+  } catch {
+    return NextResponse.json({ error: "Faylni saqlashda xatolik yuz berdi" }, { status: 500 });
+  }
 
   return NextResponse.json({ url: `/uploads/${filename}` }, { status: 201 });
 }

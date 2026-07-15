@@ -40,6 +40,9 @@ function today() {
   return format(new Date(), "yyyy-MM-dd");
 }
 
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+
 export function AdminModels() {
   const [models, setModels] = useState<ModelRow[]>([]);
   const [name, setName] = useState("");
@@ -48,6 +51,8 @@ export function AdminModels() {
   const [deadline, setDeadline] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState(SORT_OPTIONS[0].value);
@@ -69,6 +74,23 @@ export function AdminModels() {
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null;
+    setImageError(null);
+    if (file) {
+      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        setImageError("Faqat JPG, PNG, WEBP yoki GIF fayllar qabul qilinadi");
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        setImageFile(null);
+        setImagePreview(null);
+        return;
+      }
+      if (file.size > MAX_IMAGE_SIZE) {
+        setImageError("Fayl hajmi 5MB dan oshmasligi kerak");
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        setImageFile(null);
+        setImagePreview(null);
+        return;
+      }
+    }
     setImageFile(file);
     setImagePreview(file ? URL.createObjectURL(file) : null);
   }
@@ -76,20 +98,25 @@ export function AdminModels() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!name) return;
+    setFormError(null);
     setSubmitting(true);
 
     let imageUrl: string | null = null;
     if (imageFile) {
       const formData = new FormData();
       formData.append("file", imageFile);
-      const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
-      if (uploadRes.ok) {
-        const uploadData = await uploadRes.json();
-        imageUrl = uploadData.url;
+      const uploadRes = await fetch("/api/upload", { method: "POST", body: formData }).catch(() => null);
+      if (!uploadRes || !uploadRes.ok) {
+        const body = uploadRes ? await uploadRes.json().catch(() => null) : null;
+        setFormError(body?.error || "Rasmni yuklashda xatolik yuz berdi");
+        setSubmitting(false);
+        return;
       }
+      const uploadData = await uploadRes.json();
+      imageUrl = uploadData.url;
     }
 
-    await fetch("/api/models", {
+    const createRes = await fetch("/api/models", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -99,7 +126,14 @@ export function AdminModels() {
         deadline: deadline || null,
         imageUrl,
       }),
-    });
+    }).catch(() => null);
+
+    if (!createRes || !createRes.ok) {
+      const body = createRes ? await createRes.json().catch(() => null) : null;
+      setFormError(body?.error || "Modelni saqlashda xatolik yuz berdi");
+      setSubmitting(false);
+      return;
+    }
 
     setName("");
     setStage("3d");
@@ -107,6 +141,7 @@ export function AdminModels() {
     setDeadline("");
     setImageFile(null);
     setImagePreview(null);
+    setImageError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
     setSubmitting(false);
     load();
@@ -152,6 +187,9 @@ export function AdminModels() {
         onSubmit={handleCreate}
         className="bg-card rounded-3xl shadow-sm p-5 grid grid-cols-1 sm:grid-cols-6 gap-3 items-end"
       >
+        {formError && (
+          <div className="sm:col-span-6 rounded-xl bg-red/10 px-3 py-2 text-xs font-medium text-red">{formError}</div>
+        )}
         <div className="sm:col-span-1">
           <label className="block text-xs font-medium text-ink/60 mb-1.5">Rasm</label>
           <button
@@ -173,6 +211,7 @@ export function AdminModels() {
             onChange={handleFileChange}
             className="hidden"
           />
+          {imageError && <p className="mt-1 text-[11px] font-medium text-red">{imageError}</p>}
         </div>
         <div className="sm:col-span-1">
           <label className="block text-xs font-medium text-ink/60 mb-1.5">Model nomi</label>

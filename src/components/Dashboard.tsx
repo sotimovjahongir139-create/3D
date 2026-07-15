@@ -9,6 +9,7 @@ import { StatCard } from "@/components/StatCard";
 import { TableCard } from "@/components/TableCard";
 import { HorizontalStageBars } from "@/components/HorizontalStageBars";
 import { SemiDonutGauge } from "@/components/SemiDonutGauge";
+import { GanttChart } from "@/components/GanttChart";
 import { itemStatus } from "@/lib/labels";
 import { STAGE_META } from "@/lib/stageMeta";
 
@@ -19,12 +20,21 @@ type ItemRow = {
   model: { name: string };
 };
 
+type GanttItemRow = {
+  id: string;
+  currentStage: string;
+  stageStart: string;
+  deadline: string | null;
+  model: { name: string };
+};
+
 type DashboardData = {
   countsByStage: Record<string, number>;
   totalItems: number;
   overdueCount: number;
   overdueItems: ItemRow[];
   upcomingDeadlines: ItemRow[];
+  activeItems: GanttItemRow[];
 };
 
 const SORT_OPTIONS = [
@@ -35,8 +45,6 @@ const SORT_OPTIONS = [
 export function Dashboard() {
   const { data: session } = useSession();
   const [data, setData] = useState<DashboardData | null>(null);
-  const [overdueSearch, setOverdueSearch] = useState("");
-  const [overdueSort, setOverdueSort] = useState(SORT_OPTIONS[0].value);
   const [upcomingSearch, setUpcomingSearch] = useState("");
   const [upcomingSort, setUpcomingSort] = useState(SORT_OPTIONS[0].value);
 
@@ -57,10 +65,6 @@ export function Dashboard() {
     return list;
   };
 
-  const visibleOverdue = useMemo(
-    () => (data ? filterSort(data.overdueItems, overdueSearch, overdueSort) : []),
-    [data, overdueSearch, overdueSort]
-  );
   const visibleUpcoming = useMemo(
     () => (data ? filterSort(data.upcomingDeadlines, upcomingSearch, upcomingSort) : []),
     [data, upcomingSearch, upcomingSort]
@@ -113,31 +117,19 @@ export function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        <TableCard
-          title="Kechikkan bandlar"
-          count={visibleOverdue.length}
-          search={overdueSearch}
-          onSearchChange={setOverdueSearch}
-          sortValue={overdueSort}
-          onSortChange={setOverdueSort}
-          sortOptions={SORT_OPTIONS}
-        >
-          <ItemTable items={visibleOverdue} />
-        </TableCard>
+      <GanttChart items={data.activeItems} />
 
-        <TableCard
-          title="Yaqinlashayotgan muddatlar"
-          count={visibleUpcoming.length}
-          search={upcomingSearch}
-          onSearchChange={setUpcomingSearch}
-          sortValue={upcomingSort}
-          onSortChange={setUpcomingSort}
-          sortOptions={SORT_OPTIONS}
-        >
-          <ItemTable items={visibleUpcoming} />
-        </TableCard>
-      </div>
+      <TableCard
+        title="Yaqinlashayotgan muddatlar"
+        count={visibleUpcoming.length}
+        search={upcomingSearch}
+        onSearchChange={setUpcomingSearch}
+        sortValue={upcomingSort}
+        onSortChange={setUpcomingSort}
+        sortOptions={SORT_OPTIONS}
+      >
+        <ItemTable items={visibleUpcoming} />
+      </TableCard>
     </div>
   );
 }

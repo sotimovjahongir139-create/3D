@@ -15,7 +15,7 @@ export async function GET() {
   const scopedStage = ROLE_STAGE[user!.role];
   const stageWhere = scopedStage ? { currentStage: scopedStage as never } : {};
 
-  const [stage3d, stageMold, stageSales, overdueItems, upcomingItems] = await Promise.all([
+  const [stage3d, stageMold, stageSales, overdueItems, upcomingItems, activeItems] = await Promise.all([
     prisma.productionItem.count({ where: { currentStage: "stage_3d" } }),
     prisma.productionItem.count({ where: { currentStage: "stage_mold" } }),
     prisma.productionItem.count({ where: { currentStage: "stage_sales" } }),
@@ -39,6 +39,15 @@ export async function GET() {
       orderBy: { deadline: "asc" },
       take: 10,
     }),
+    prisma.productionItem.findMany({
+      where: {
+        ...stageWhere,
+        currentStage: { not: "stage_sales" },
+      },
+      include: { model: true },
+      orderBy: { stageStart: "asc" },
+      take: 200,
+    }),
   ]);
 
   const totalItems = await prisma.productionItem.count(stageWhere.currentStage ? { where: stageWhere } : undefined);
@@ -51,5 +60,6 @@ export async function GET() {
     overdueCount: overdueItems.length,
     overdueItems,
     upcomingDeadlines: upcomingItems,
+    activeItems,
   });
 }
