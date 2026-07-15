@@ -107,7 +107,7 @@ export function DepartmentQueue({ stage }: { stage: "3d" | "mold" }) {
                       }
                       className="flex items-center gap-3 text-left hover:opacity-80"
                     >
-                      <ModelThumb src={item.model.imageUrl} alt={item.model.name} size={40} rounded="full" />
+                      <ModelThumb src={item.model.imageUrl} alt={item.model.name} size={44} rounded="full" />
                       <div>
                         <div className="font-medium text-ink">{item.model.name}</div>
                         {item.model.category && <div className="text-xs text-ink/40">{item.model.category}</div>}

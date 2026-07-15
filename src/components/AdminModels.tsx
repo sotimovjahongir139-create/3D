@@ -308,7 +308,7 @@ export function AdminModels() {
                       }
                       className="flex items-center gap-3 text-left hover:opacity-80"
                     >
-                      <ModelThumb src={model.imageUrl} alt={model.name} size={40} rounded="lg" />
+                      <ModelThumb src={model.imageUrl} alt={model.name} size={44} rounded="lg" />
                       <div>
                         <div className="font-medium text-ink">{model.name}</div>
                         {model.category && <div className="text-xs text-ink/40">{model.category}</div>}

@@ -33,9 +33,10 @@ const STAGE_BAR_COLOR: Record<string, string> = {
   stage_sales: "bg-green",
 };
 
-const DAY_PX = 9;
-const STICKY_COL_PX = 184;
-const THUMB_SIZE = 32;
+const DAY_PX = 10;
+const STICKY_COL_PX = 200;
+const THUMB_SIZE = 40;
+const MIN_SEGMENT_PX = 3 * DAY_PX;
 const BACK_MONTHS = 1;
 const FORWARD_MONTHS = 3;
 
@@ -173,21 +174,21 @@ export function GanttChart({ items }: GanttChartProps) {
               />
               {bars.map((bar) => {
                 const deadlineOffsetPx = bar.deadlineDate ? differenceInCalendarDays(bar.deadlineDate, rangeStart) * DAY_PX : null;
+                const openDetail = () =>
+                  setSelectedDetail({
+                    name: bar.modelName,
+                    category: bar.modelCategory,
+                    imageUrl: bar.modelImageUrl,
+                    currentStage: bar.currentStage,
+                    stageStart: bar.stageStart,
+                    deadline: bar.deadline,
+                  });
 
                 return (
                   <div key={bar.id} className="flex items-center border-b border-ink/5 last:border-0 h-12 relative">
                     <button
                       type="button"
-                      onClick={() =>
-                        setSelectedDetail({
-                          name: bar.modelName,
-                          category: bar.modelCategory,
-                          imageUrl: bar.modelImageUrl,
-                          currentStage: bar.currentStage,
-                          stageStart: bar.stageStart,
-                          deadline: bar.deadline,
-                        })
-                      }
+                      onClick={openDetail}
                       className="sticky left-0 z-10 bg-card shrink-0 px-3 flex items-center gap-2 h-full text-left hover:bg-bg"
                       style={{ width: STICKY_COL_PX }}
                       title={bar.modelName}
@@ -198,27 +199,27 @@ export function GanttChart({ items }: GanttChartProps) {
                     <div className="relative h-full shrink-0" style={{ width: totalWidth }}>
                       {bar.segments.map((segment, si) => {
                         const segOffsetPx = differenceInCalendarDays(segment.start, rangeStart) * DAY_PX;
-                        const segWidthPx = Math.max(differenceInCalendarDays(segment.end, segment.start) * DAY_PX, DAY_PX);
-                        const isFirst = si === 0;
+                        const segWidthPx = Math.max(
+                          differenceInCalendarDays(segment.end, segment.start) * DAY_PX,
+                          MIN_SEGMENT_PX
+                        );
                         const isLast = si === bar.segments.length - 1;
-                        const roundedClass =
-                          isFirst && isLast ? "rounded-full" : isFirst ? "rounded-l-full" : isLast ? "rounded-r-full" : "";
                         const overdueRing = isLast && bar.overdue ? "ring-2 ring-ink/70 ring-offset-1 ring-offset-card" : "";
 
                         return (
                           <div
                             key={si}
-                            className={`absolute top-1/2 -translate-y-1/2 h-4 cursor-pointer ${STAGE_BAR_COLOR[segment.stage] ?? "bg-ink/30"} ${roundedClass} ${overdueRing}`}
+                            className={`absolute top-1/2 -translate-y-1/2 h-5 rounded cursor-pointer ${STAGE_BAR_COLOR[segment.stage] ?? "bg-ink/30"} ${overdueRing}`}
                             style={{ left: segOffsetPx, width: segWidthPx }}
                             onMouseEnter={() => setActiveTooltip(bar.id)}
                             onMouseLeave={() => setActiveTooltip(null)}
-                            onClick={() => setActiveTooltip((cur) => (cur === bar.id ? null : bar.id))}
+                            onClick={openDetail}
                           />
                         );
                       })}
                       {bar.deadlineDate && deadlineOffsetPx !== null && (
                         <span
-                          className="absolute -top-1 -translate-x-1/2 flex items-center gap-0.5 text-[10px] font-bold text-red whitespace-nowrap"
+                          className="absolute top-0.5 -translate-x-1/2 flex items-center gap-0.5 text-[10px] font-bold text-red whitespace-nowrap"
                           style={{ left: deadlineOffsetPx }}
                         >
                           {bar.overdue && <AlertTriangle size={10} strokeWidth={2.5} />}

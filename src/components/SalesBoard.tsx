@@ -2,16 +2,20 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { format } from "date-fns";
-import { CheckCircle2 } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { TableCard } from "@/components/TableCard";
 import { PageHeader } from "@/components/PageHeader";
+import { ModelThumb } from "@/components/ModelThumb";
+import { ModelDetailModal, type ModelDetail } from "@/components/ModelDetailModal";
 import { PROPOSAL_STATUS_LABELS } from "@/lib/labels";
 
 type Item = {
   id: string;
   sampleSent: boolean;
-  model: { name: string; category: string | null };
+  currentStage: string;
+  stageStart: string;
+  deadline: string | null;
+  model: { name: string; category: string | null; imageUrl: string | null };
 };
 
 type Proposal = {
@@ -43,6 +47,7 @@ export function SalesBoard() {
   const [itemSort, setItemSort] = useState(ITEM_SORT_OPTIONS[0].value);
   const [proposalSearch, setProposalSearch] = useState("");
   const [proposalSort, setProposalSort] = useState(PROPOSAL_SORT_OPTIONS[0].value);
+  const [selectedDetail, setSelectedDetail] = useState<ModelDetail | null>(null);
 
   const load = useCallback(async () => {
     const [itemsRes, proposalsRes] = await Promise.all([
@@ -123,15 +128,26 @@ export function SalesBoard() {
             {visibleItems.map((item) => (
               <tr key={item.id} className="border-b border-ink/5 last:border-0 h-[56px]">
                 <td className="px-5 py-3">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green/10 text-green">
-                      <CheckCircle2 size={15} strokeWidth={2} />
-                    </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedDetail({
+                        name: item.model.name,
+                        category: item.model.category,
+                        imageUrl: item.model.imageUrl,
+                        currentStage: item.currentStage,
+                        stageStart: item.stageStart,
+                        deadline: item.deadline,
+                      })
+                    }
+                    className="flex items-center gap-3 text-left hover:opacity-80"
+                  >
+                    <ModelThumb src={item.model.imageUrl} alt={item.model.name} size={44} rounded="full" />
                     <div>
                       <div className="font-medium text-ink">{item.model.name}</div>
                       {item.model.category && <div className="text-xs text-ink/40">{item.model.category}</div>}
                     </div>
-                  </div>
+                  </button>
                 </td>
                 <td className="px-5 py-3">
                   {item.sampleSent ? (
@@ -263,6 +279,8 @@ export function SalesBoard() {
           </table>
         </TableCard>
       </div>
+
+      <ModelDetailModal detail={selectedDetail} onClose={() => setSelectedDetail(null)} />
     </div>
   );
 }
