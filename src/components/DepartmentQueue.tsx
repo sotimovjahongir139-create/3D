@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { TableCard } from "@/components/TableCard";
 import { PageHeader } from "@/components/PageHeader";
 import { ModelThumb } from "@/components/ModelThumb";
+import { ModelDetailModal, type ModelDetail } from "@/components/ModelDetailModal";
 import { itemStatus } from "@/lib/labels";
 
 type Item = {
@@ -31,6 +32,7 @@ export function DepartmentQueue({ stage }: { stage: "3d" | "mold" }) {
   const [finishingId, setFinishingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState(SORT_OPTIONS[0].value);
+  const [selectedDetail, setSelectedDetail] = useState<ModelDetail | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/items?stage=${stage}`);
@@ -91,13 +93,26 @@ export function DepartmentQueue({ stage }: { stage: "3d" | "mold" }) {
               return (
                 <tr key={item.id} className="border-b border-ink/5 last:border-0 h-[56px]">
                   <td className="px-5 py-3">
-                    <div className="flex items-center gap-3">
-                      <ModelThumb src={item.model.imageUrl} alt={item.model.name} size={32} rounded="full" />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedDetail({
+                          name: item.model.name,
+                          category: item.model.category,
+                          imageUrl: item.model.imageUrl,
+                          currentStage: item.currentStage,
+                          stageStart: item.stageStart,
+                          deadline: item.deadline,
+                        })
+                      }
+                      className="flex items-center gap-3 text-left hover:opacity-80"
+                    >
+                      <ModelThumb src={item.model.imageUrl} alt={item.model.name} size={40} rounded="full" />
                       <div>
                         <div className="font-medium text-ink">{item.model.name}</div>
                         {item.model.category && <div className="text-xs text-ink/40">{item.model.category}</div>}
                       </div>
-                    </div>
+                    </button>
                   </td>
                   <td className="px-5 py-3 text-ink/70">{format(new Date(item.stageStart), "dd.MM.yyyy")}</td>
                   <td className="px-5 py-3 text-ink/70">
@@ -128,6 +143,8 @@ export function DepartmentQueue({ stage }: { stage: "3d" | "mold" }) {
           </tbody>
         </table>
       </TableCard>
+
+      <ModelDetailModal detail={selectedDetail} onClose={() => setSelectedDetail(null)} />
     </div>
   );
 }

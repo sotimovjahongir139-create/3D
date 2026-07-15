@@ -40,11 +40,8 @@ export async function GET() {
       take: 10,
     }),
     prisma.productionItem.findMany({
-      where: {
-        ...stageWhere,
-        currentStage: { not: "stage_sales" },
-      },
-      include: { model: true },
+      where: stageWhere,
+      include: { model: true, logs: true },
       orderBy: { stageStart: "asc" },
       take: 200,
     }),

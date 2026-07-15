@@ -25,7 +25,8 @@ type GanttItemRow = {
   currentStage: string;
   stageStart: string;
   deadline: string | null;
-  model: { name: string };
+  model: { name: string; category: string | null; imageUrl: string | null };
+  logs: { stage: string; startDate: string; endDate: string }[];
 };
 
 type DashboardData = {

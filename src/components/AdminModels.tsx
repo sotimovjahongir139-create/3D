@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { TableCard } from "@/components/TableCard";
 import { PageHeader } from "@/components/PageHeader";
 import { ModelThumb } from "@/components/ModelThumb";
+import { ModelDetailModal, type ModelDetail } from "@/components/ModelDetailModal";
 import { itemStatus } from "@/lib/labels";
 
 type ModelItem = {
@@ -60,6 +61,7 @@ export function AdminModels() {
   const [editDeadlineValue, setEditDeadlineValue] = useState("");
   const [deletingModel, setDeletingModel] = useState<{ id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [selectedDetail, setSelectedDetail] = useState<ModelDetail | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
@@ -292,13 +294,26 @@ export function AdminModels() {
               return (
                 <tr key={item.id} className="border-b border-ink/5 last:border-0 h-[60px]">
                   <td className="px-5 py-3">
-                    <div className="flex items-center gap-3">
-                      <ModelThumb src={model.imageUrl} alt={model.name} size={36} rounded="lg" />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedDetail({
+                          name: model.name,
+                          category: model.category,
+                          imageUrl: model.imageUrl,
+                          currentStage: item.currentStage,
+                          stageStart: item.stageStart,
+                          deadline: item.deadline,
+                        })
+                      }
+                      className="flex items-center gap-3 text-left hover:opacity-80"
+                    >
+                      <ModelThumb src={model.imageUrl} alt={model.name} size={40} rounded="lg" />
                       <div>
                         <div className="font-medium text-ink">{model.name}</div>
                         {model.category && <div className="text-xs text-ink/40">{model.category}</div>}
                       </div>
-                    </div>
+                    </button>
                   </td>
                   <td className="px-5 py-3">
                     <StageBadge stage={item.currentStage} />
@@ -419,6 +434,8 @@ export function AdminModels() {
           </div>
         </div>
       )}
+
+      <ModelDetailModal detail={selectedDetail} onClose={() => setSelectedDetail(null)} />
     </div>
   );
 }

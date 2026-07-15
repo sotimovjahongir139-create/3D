@@ -2,60 +2,81 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { addDays, addMonths, differenceInCalendarDays, endOfMonth, max as maxDate, min as minDate, parseISO, startOfDay, startOfMonth, subMonths } from "date-fns";
-import { History } from "lucide-react";
+import { AlertTriangle, History } from "lucide-react";
 import { STAGE_LABELS } from "@/lib/labels";
+import { ModelThumb } from "@/components/ModelThumb";
+import { ModelDetailModal, type ModelDetail } from "@/components/ModelDetailModal";
 
 type GanttItem = {
   id: string;
   currentStage: string;
   stageStart: string;
   deadline: string | null;
-  model: { name: string };
+  model: { name: string; category: string | null; imageUrl: string | null };
+  logs: { stage: string; startDate: string; endDate: string }[];
 };
 
 type GanttChartProps = {
   items: GanttItem[];
 };
 
+type Segment = { stage: string; start: Date; end: Date };
+
 const UZ_MONTHS = [
   "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
   "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr",
 ];
 
+const STAGE_BAR_COLOR: Record<string, string> = {
+  stage_3d: "bg-red",
+  stage_mold: "bg-blue",
+  stage_sales: "bg-green",
+};
+
 const DAY_PX = 9;
-const STICKY_COL_PX = 148;
-const FALLBACK_DURATION_DAYS = 21;
+const STICKY_COL_PX = 184;
+const THUMB_SIZE = 32;
 const BACK_MONTHS = 1;
 const FORWARD_MONTHS = 3;
 
 export function GanttChart({ items }: GanttChartProps) {
   const [showFullHistory, setShowFullHistory] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+  const [selectedDetail, setSelectedDetail] = useState<ModelDetail | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const today = useMemo(() => startOfDay(new Date()), []);
 
   const bars = useMemo(
     () =>
       items.map((item) => {
-        const start = startOfDay(parseISO(item.stageStart));
+        const segments: Segment[] = [...item.logs]
+          .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+          .map((log) => ({
+            stage: log.stage,
+            start: startOfDay(parseISO(log.startDate)),
+            end: startOfDay(parseISO(log.endDate)),
+          }));
+
+        const currentStart = startOfDay(parseISO(item.stageStart));
+        const currentEnd = maxDate([today, addDays(currentStart, 1)]);
+        segments.push({ stage: item.currentStage, start: currentStart, end: currentEnd });
+
         const deadline = item.deadline ? startOfDay(parseISO(item.deadline)) : null;
-        const overdueDays = deadline ? Math.max(0, differenceInCalendarDays(today, deadline)) : 0;
-        const plannedEnd = deadline ?? maxDate([addDays(start, FALLBACK_DURATION_DAYS), today]);
-        const naturalEnd = overdueDays > 0 ? today : plannedEnd;
-        const end = naturalEnd > start ? naturalEnd : addDays(start, 1);
-        const totalDays = Math.max(1, differenceInCalendarDays(end, start));
-        const redWidthDays = Math.min(overdueDays, totalDays);
-        const blueWidthDays = Math.max(0, totalDays - redWidthDays);
+        const overdue = deadline ? today > deadline : false;
+
         return {
           id: item.id,
           modelName: item.model.name,
+          modelCategory: item.model.category,
+          modelImageUrl: item.model.imageUrl,
+          currentStage: item.currentStage,
+          stageStart: item.stageStart,
           stageLabel: STAGE_LABELS[item.currentStage] ?? item.currentStage,
-          start,
-          end,
-          deadline,
-          totalDays,
-          redWidthDays,
-          blueWidthDays,
+          deadline: item.deadline,
+          deadlineDate: deadline,
+          overdue,
+          segments,
+          overallStart: segments[0].start,
         };
       }),
     [items, today]
@@ -66,14 +87,15 @@ export function GanttChart({ items }: GanttChartProps) {
 
   const rangeStart = useMemo(() => {
     if (!showFullHistory) return defaultRangeStart;
-    const earliestStart = bars.length ? minDate(bars.map((b) => b.start)) : defaultRangeStart;
+    const earliestStart = bars.length ? minDate(bars.map((b) => b.overallStart)) : defaultRangeStart;
     return startOfMonth(minDate([earliestStart, defaultRangeStart]));
   }, [showFullHistory, bars, defaultRangeStart]);
 
   const rangeEnd = useMemo(() => {
-    const furthestEnd = bars.length ? maxDate(bars.map((b) => b.end)) : defaultRangeEnd;
-    return endOfMonth(maxDate([furthestEnd, defaultRangeEnd]));
-  }, [bars, defaultRangeEnd]);
+    const deadlines = bars.map((b) => b.deadlineDate).filter((d): d is Date => d !== null);
+    const furthest = deadlines.length ? maxDate(deadlines) : defaultRangeEnd;
+    return endOfMonth(maxDate([furthest, defaultRangeEnd, today]));
+  }, [bars, defaultRangeEnd, today]);
 
   const months = useMemo(() => {
     const result: { start: Date; label: string; totalDays: number; weeks: number[] }[] = [];
@@ -150,61 +172,70 @@ export function GanttChart({ items }: GanttChartProps) {
                 style={{ left: STICKY_COL_PX + todayOffsetPx }}
               />
               {bars.map((bar) => {
-                const offsetPx = differenceInCalendarDays(bar.start, rangeStart) * DAY_PX;
-                const blueWidthPx = bar.blueWidthDays * DAY_PX;
-                const redWidthPx = bar.redWidthDays * DAY_PX;
-                const deadlineOffsetPx = bar.deadline ? differenceInCalendarDays(bar.deadline, rangeStart) * DAY_PX : null;
+                const deadlineOffsetPx = bar.deadlineDate ? differenceInCalendarDays(bar.deadlineDate, rangeStart) * DAY_PX : null;
 
                 return (
-                  <div key={bar.id} className="flex items-center border-b border-ink/5 last:border-0 h-11 relative">
-                    <div
-                      className="sticky left-0 z-10 bg-card shrink-0 px-3 text-xs font-medium text-ink truncate flex items-center h-full"
+                  <div key={bar.id} className="flex items-center border-b border-ink/5 last:border-0 h-12 relative">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedDetail({
+                          name: bar.modelName,
+                          category: bar.modelCategory,
+                          imageUrl: bar.modelImageUrl,
+                          currentStage: bar.currentStage,
+                          stageStart: bar.stageStart,
+                          deadline: bar.deadline,
+                        })
+                      }
+                      className="sticky left-0 z-10 bg-card shrink-0 px-3 flex items-center gap-2 h-full text-left hover:bg-bg"
                       style={{ width: STICKY_COL_PX }}
                       title={bar.modelName}
                     >
-                      {bar.modelName}
-                    </div>
+                      <ModelThumb src={bar.modelImageUrl} alt={bar.modelName} size={THUMB_SIZE} rounded="lg" />
+                      <span className="text-xs font-medium text-ink truncate">{bar.modelName}</span>
+                    </button>
                     <div className="relative h-full shrink-0" style={{ width: totalWidth }}>
-                      {blueWidthPx > 0 && (
-                        <div
-                          className={`absolute top-1/2 -translate-y-1/2 h-4 cursor-pointer bg-blue ${
-                            redWidthPx > 0 ? "rounded-l-full" : "rounded-full"
-                          }`}
-                          style={{ left: offsetPx, width: Math.max(blueWidthPx, DAY_PX) }}
-                          onMouseEnter={() => setActiveTooltip(bar.id)}
-                          onMouseLeave={() => setActiveTooltip(null)}
-                          onClick={() => setActiveTooltip((cur) => (cur === bar.id ? null : bar.id))}
-                        />
-                      )}
-                      {redWidthPx > 0 && (
-                        <div
-                          className={`absolute top-1/2 -translate-y-1/2 h-4 cursor-pointer bg-red ${
-                            blueWidthPx > 0 ? "rounded-r-full" : "rounded-full"
-                          }`}
-                          style={{ left: offsetPx + blueWidthPx, width: Math.max(redWidthPx, DAY_PX) }}
-                          onMouseEnter={() => setActiveTooltip(bar.id)}
-                          onMouseLeave={() => setActiveTooltip(null)}
-                          onClick={() => setActiveTooltip((cur) => (cur === bar.id ? null : bar.id))}
-                        />
-                      )}
-                      {bar.deadline && deadlineOffsetPx !== null && (
+                      {bar.segments.map((segment, si) => {
+                        const segOffsetPx = differenceInCalendarDays(segment.start, rangeStart) * DAY_PX;
+                        const segWidthPx = Math.max(differenceInCalendarDays(segment.end, segment.start) * DAY_PX, DAY_PX);
+                        const isFirst = si === 0;
+                        const isLast = si === bar.segments.length - 1;
+                        const roundedClass =
+                          isFirst && isLast ? "rounded-full" : isFirst ? "rounded-l-full" : isLast ? "rounded-r-full" : "";
+                        const overdueRing = isLast && bar.overdue ? "ring-2 ring-ink/70 ring-offset-1 ring-offset-card" : "";
+
+                        return (
+                          <div
+                            key={si}
+                            className={`absolute top-1/2 -translate-y-1/2 h-4 cursor-pointer ${STAGE_BAR_COLOR[segment.stage] ?? "bg-ink/30"} ${roundedClass} ${overdueRing}`}
+                            style={{ left: segOffsetPx, width: segWidthPx }}
+                            onMouseEnter={() => setActiveTooltip(bar.id)}
+                            onMouseLeave={() => setActiveTooltip(null)}
+                            onClick={() => setActiveTooltip((cur) => (cur === bar.id ? null : bar.id))}
+                          />
+                        );
+                      })}
+                      {bar.deadlineDate && deadlineOffsetPx !== null && (
                         <span
-                          className="absolute -top-1 -translate-x-1/2 text-[10px] font-bold text-red whitespace-nowrap"
+                          className="absolute -top-1 -translate-x-1/2 flex items-center gap-0.5 text-[10px] font-bold text-red whitespace-nowrap"
                           style={{ left: deadlineOffsetPx }}
                         >
-                          {bar.deadline.getDate()}
+                          {bar.overdue && <AlertTriangle size={10} strokeWidth={2.5} />}
+                          {bar.deadlineDate.getDate()}
                         </span>
                       )}
                       {activeTooltip === bar.id && (
                         <div
                           className="absolute -top-2 -translate-y-full z-30 rounded-xl bg-ink px-3 py-2 text-xs text-white shadow-lg whitespace-nowrap"
-                          style={{ left: offsetPx }}
+                          style={{ left: differenceInCalendarDays(bar.overallStart, rangeStart) * DAY_PX }}
                         >
                           <div className="font-semibold">{bar.modelName}</div>
                           <div className="text-white/70">{bar.stageLabel}</div>
                           <div className="text-white/70">
-                            {bar.deadline ? `Muddat: ${bar.deadline.toLocaleDateString("uz-UZ")}` : "Muddat belgilanmagan"}
+                            {bar.deadline ? `Muddat: ${bar.deadlineDate!.toLocaleDateString("uz-UZ")}` : "Muddat belgilanmagan"}
                           </div>
+                          {bar.overdue && <div className="text-red font-medium">Kechikkan</div>}
                         </div>
                       )}
                     </div>
@@ -215,6 +246,8 @@ export function GanttChart({ items }: GanttChartProps) {
           </div>
         </div>
       )}
+
+      <ModelDetailModal detail={selectedDetail} onClose={() => setSelectedDetail(null)} />
     </div>
   );
 }
