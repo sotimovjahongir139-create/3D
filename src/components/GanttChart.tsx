@@ -27,11 +27,9 @@ const STICKY_COL_PX = 148;
 const FALLBACK_DURATION_DAYS = 21;
 const BACK_MONTHS = 1;
 const FORWARD_MONTHS = 3;
-const DEFAULT_THRESHOLD_DAYS = 5;
 
 export function GanttChart({ items }: GanttChartProps) {
   const [showFullHistory, setShowFullHistory] = useState(false);
-  const [thresholdDays, setThresholdDays] = useState(DEFAULT_THRESHOLD_DAYS);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const today = useMemo(() => startOfDay(new Date()), []);
@@ -41,12 +39,12 @@ export function GanttChart({ items }: GanttChartProps) {
       items.map((item) => {
         const start = startOfDay(parseISO(item.stageStart));
         const deadline = item.deadline ? startOfDay(parseISO(item.deadline)) : null;
-        const plannedEnd = deadline ?? addDays(start, FALLBACK_DURATION_DAYS);
-        const naturalEnd = maxDate([plannedEnd, today]);
+        const overdueDays = deadline ? Math.max(0, differenceInCalendarDays(today, deadline)) : 0;
+        const plannedEnd = deadline ?? maxDate([addDays(start, FALLBACK_DURATION_DAYS), today]);
+        const naturalEnd = overdueDays > 0 ? today : plannedEnd;
         const end = naturalEnd > start ? naturalEnd : addDays(start, 1);
         const totalDays = Math.max(1, differenceInCalendarDays(end, start));
-        const redStart = deadline ? maxDate([start, addDays(deadline, -thresholdDays)]) : null;
-        const redWidthDays = redStart ? Math.max(0, differenceInCalendarDays(end, redStart)) : 0;
+        const redWidthDays = Math.min(overdueDays, totalDays);
         const blueWidthDays = Math.max(0, totalDays - redWidthDays);
         return {
           id: item.id,
@@ -60,7 +58,7 @@ export function GanttChart({ items }: GanttChartProps) {
           blueWidthDays,
         };
       }),
-    [items, today, thresholdDays]
+    [items, today]
   );
 
   const defaultRangeStart = useMemo(() => startOfMonth(subMonths(today, BACK_MONTHS)), [today]);
@@ -111,17 +109,6 @@ export function GanttChart({ items }: GanttChartProps) {
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-4 border-b border-ink/5">
         <h3 className="font-display font-bold text-ink text-sm sm:text-base">Kechikkan bandlar — jadval</h3>
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-1.5 text-xs text-ink/50">
-            Muddat ogohlantirish (kun):
-            <input
-              type="number"
-              min={1}
-              max={60}
-              value={thresholdDays}
-              onChange={(e) => setThresholdDays(Math.max(1, Number(e.target.value) || 1))}
-              className="w-14 rounded-lg border border-ink/10 bg-bg px-2 py-1 text-xs focus:border-primary focus:outline-none"
-            />
-          </label>
           <button
             onClick={() => setShowFullHistory((v) => !v)}
             className="flex items-center gap-1.5 rounded-full border border-ink/10 px-3 py-1.5 text-xs font-medium text-ink/60 hover:bg-bg"

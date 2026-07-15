@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import Image from "next/image";
 import { format } from "date-fns";
 import { Pencil, Trash2, ImagePlus, X } from "lucide-react";
 import { StageBadge } from "@/components/StageBadge";
 import { StatusBadge } from "@/components/StatusBadge";
 import { TableCard } from "@/components/TableCard";
 import { PageHeader } from "@/components/PageHeader";
+import { ModelThumb } from "@/components/ModelThumb";
 import { itemStatus } from "@/lib/labels";
 
 type ModelItem = {
@@ -293,19 +293,7 @@ export function AdminModels() {
                 <tr key={item.id} className="border-b border-ink/5 last:border-0 h-[60px]">
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
-                      {model.imageUrl ? (
-                        <Image
-                          src={model.imageUrl}
-                          alt={model.name}
-                          width={36}
-                          height={36}
-                          className="h-9 w-9 rounded-lg object-cover"
-                        />
-                      ) : (
-                        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-bg text-ink/30 text-xs">
-                          —
-                        </span>
-                      )}
+                      <ModelThumb src={model.imageUrl} alt={model.name} size={36} rounded="lg" />
                       <div>
                         <div className="font-medium text-ink">{model.name}</div>
                         {model.category && <div className="text-xs text-ink/40">{model.category}</div>}

@@ -2,12 +2,11 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { format } from "date-fns";
-import Image from "next/image";
 import { StatusBadge } from "@/components/StatusBadge";
 import { TableCard } from "@/components/TableCard";
 import { PageHeader } from "@/components/PageHeader";
+import { ModelThumb } from "@/components/ModelThumb";
 import { itemStatus } from "@/lib/labels";
-import { STAGE_META } from "@/lib/stageMeta";
 
 type Item = {
   id: string;
@@ -62,7 +61,6 @@ export function DepartmentQueue({ stage }: { stage: "3d" | "mold" }) {
   }, [items, search, sort]);
 
   const meta = TITLES[stage];
-  const Icon = STAGE_META[stage === "3d" ? "stage_3d" : "stage_mold"].icon;
 
   return (
     <div>
@@ -94,19 +92,7 @@ export function DepartmentQueue({ stage }: { stage: "3d" | "mold" }) {
                 <tr key={item.id} className="border-b border-ink/5 last:border-0 h-[56px]">
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
-                      {item.model.imageUrl ? (
-                        <Image
-                          src={item.model.imageUrl}
-                          alt={item.model.name}
-                          width={32}
-                          height={32}
-                          className="h-8 w-8 rounded-full object-cover"
-                        />
-                      ) : (
-                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-bg text-ink/50">
-                          <Icon size={15} strokeWidth={2} />
-                        </span>
-                      )}
+                      <ModelThumb src={item.model.imageUrl} alt={item.model.name} size={32} rounded="full" />
                       <div>
                         <div className="font-medium text-ink">{item.model.name}</div>
                         {item.model.category && <div className="text-xs text-ink/40">{item.model.category}</div>}
