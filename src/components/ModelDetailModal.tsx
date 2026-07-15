@@ -24,24 +24,21 @@ export function ModelDetailModal({ detail, onClose }: { detail: ModelDetail | nu
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-ink/40 px-4" onClick={onClose}>
       <div
-        className="w-full max-w-sm rounded-3xl bg-card p-6 shadow-lg"
+        className="relative w-full max-w-sm rounded-3xl bg-card p-6 shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <ModelThumb src={detail.imageUrl} alt={detail.name} size={56} rounded="lg" />
-            <div>
-              <h3 className="font-display font-bold text-ink leading-tight">{detail.name}</h3>
-              {detail.category && <div className="text-xs text-ink/40">{detail.category}</div>}
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            aria-label="Yopish"
-            className="shrink-0 rounded-full p-1.5 text-ink/40 hover:bg-bg hover:text-ink"
-          >
-            <X size={16} />
-          </button>
+        <button
+          onClick={onClose}
+          aria-label="Yopish"
+          className="absolute right-4 top-4 rounded-full p-1.5 text-ink/40 hover:bg-bg hover:text-ink"
+        >
+          <X size={16} />
+        </button>
+
+        <div className="mb-5 flex flex-col items-center text-center">
+          <ModelThumb src={detail.imageUrl} alt={detail.name} size={88} rounded="lg" />
+          <h3 className="mt-3 font-display text-lg font-bold text-ink leading-tight">{detail.name}</h3>
+          {detail.category && <div className="mt-0.5 text-xs text-ink/40">{detail.category}</div>}
         </div>
 
         <div className="space-y-3 text-sm">
