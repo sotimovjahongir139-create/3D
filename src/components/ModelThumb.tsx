@@ -34,7 +34,10 @@ export function ModelThumb({ src, alt, size, rounded = "lg" }: ModelThumbProps) 
       height={size}
       className={`shrink-0 object-cover ${shapeClass}`}
       style={{ width: size, height: size }}
-      onError={() => setFailed(true)}
+      onError={() => {
+        console.error(`[ModelThumb] failed to load image for "${alt}": src=${src}`);
+        setFailed(true);
+      }}
     />
   );
 }

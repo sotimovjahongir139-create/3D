@@ -78,7 +78,9 @@ export function AdminModels() {
     const file = e.target.files?.[0] ?? null;
     setImageError(null);
     if (file) {
+      console.log(`[upload] file selected: name=${file.name} type=${file.type} size=${file.size}`);
       if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        console.error(`[upload] client rejected file: unsupported type "${file.type}"`);
         setImageError("Faqat JPG, PNG, WEBP yoki GIF fayllar qabul qilinadi");
         if (fileInputRef.current) fileInputRef.current.value = "";
         setImageFile(null);
@@ -86,6 +88,7 @@ export function AdminModels() {
         return;
       }
       if (file.size > MAX_IMAGE_SIZE) {
+        console.error(`[upload] client rejected file: too large (${file.size} bytes)`);
         setImageError("Fayl hajmi 5MB dan oshmasligi kerak");
         if (fileInputRef.current) fileInputRef.current.value = "";
         setImageFile(null);
@@ -105,17 +108,23 @@ export function AdminModels() {
 
     let imageUrl: string | null = null;
     if (imageFile) {
+      console.log(`[upload] uploading ${imageFile.name} (${imageFile.size} bytes)...`);
       const formData = new FormData();
       formData.append("file", imageFile);
-      const uploadRes = await fetch("/api/upload", { method: "POST", body: formData }).catch(() => null);
+      const uploadRes = await fetch("/api/upload", { method: "POST", body: formData }).catch((err) => {
+        console.error("[upload] network error during upload request:", err);
+        return null;
+      });
       if (!uploadRes || !uploadRes.ok) {
         const body = uploadRes ? await uploadRes.json().catch(() => null) : null;
+        console.error(`[upload] upload failed: status=${uploadRes?.status} body=`, body);
         setFormError(body?.error || "Rasmni yuklashda xatolik yuz berdi");
         setSubmitting(false);
         return;
       }
       const uploadData = await uploadRes.json();
       imageUrl = uploadData.url;
+      console.log(`[upload] upload succeeded, url=${imageUrl}`);
     }
 
     const createRes = await fetch("/api/models", {
@@ -128,14 +137,19 @@ export function AdminModels() {
         deadline: deadline || null,
         imageUrl,
       }),
-    }).catch(() => null);
+    }).catch((err) => {
+      console.error("[upload] network error during model create request:", err);
+      return null;
+    });
 
     if (!createRes || !createRes.ok) {
       const body = createRes ? await createRes.json().catch(() => null) : null;
+      console.error(`[upload] model create failed: status=${createRes?.status} body=`, body);
       setFormError(body?.error || "Modelni saqlashda xatolik yuz berdi");
       setSubmitting(false);
       return;
     }
+    console.log(`[upload] model created successfully with imageUrl=${imageUrl}`);
 
     setName("");
     setStage("3d");
