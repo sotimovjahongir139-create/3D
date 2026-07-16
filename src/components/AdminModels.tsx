@@ -77,19 +77,24 @@ export function AdminModels() {
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null;
     setImageError(null);
+    setFormError(null);
     if (file) {
       console.log(`[upload] file selected: name=${file.name} type=${file.type} size=${file.size}`);
       if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        const message = `Rasm qabul qilinmadi: "${file.name}" fayl turi (${file.type || "noma'lum"}) qo'llab-quvvatlanmaydi. Faqat JPG, PNG, WEBP yoki GIF fayllar qabul qilinadi — model rasmsiz saqlanadi.`;
         console.error(`[upload] client rejected file: unsupported type "${file.type}"`);
         setImageError("Faqat JPG, PNG, WEBP yoki GIF fayllar qabul qilinadi");
+        setFormError(message);
         if (fileInputRef.current) fileInputRef.current.value = "";
         setImageFile(null);
         setImagePreview(null);
         return;
       }
       if (file.size > MAX_IMAGE_SIZE) {
+        const message = `Rasm qabul qilinmadi: "${file.name}" fayl hajmi 5MB dan oshib ketdi — model rasmsiz saqlanadi.`;
         console.error(`[upload] client rejected file: too large (${file.size} bytes)`);
         setImageError("Fayl hajmi 5MB dan oshmasligi kerak");
+        setFormError(message);
         if (fileInputRef.current) fileInputRef.current.value = "";
         setImageFile(null);
         setImagePreview(null);
@@ -103,6 +108,11 @@ export function AdminModels() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!name) return;
+    if (imageError) {
+      console.error("[upload] blocked submit: unresolved image rejection still pending");
+      setFormError(`Rasm hali saqlanmadi (${imageError}). Boshqa rasm tanlang yoki rasmsiz davom eting.`);
+      return;
+    }
     setFormError(null);
     setSubmitting(true);
 
@@ -227,7 +237,21 @@ export function AdminModels() {
             onChange={handleFileChange}
             className="hidden"
           />
-          {imageError && <p className="mt-1 text-[11px] font-medium text-red">{imageError}</p>}
+          {imageError && (
+            <div className="mt-1">
+              <p className="text-[11px] font-medium text-red">{imageError}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setImageError(null);
+                  setFormError(null);
+                }}
+                className="text-[11px] font-medium text-ink/50 underline hover:text-ink"
+              >
+                Rasmsiz davom etish
+              </button>
+            </div>
+          )}
         </div>
         <div className="sm:col-span-1">
           <label className="block text-xs font-medium text-ink/60 mb-1.5">Model nomi</label>
