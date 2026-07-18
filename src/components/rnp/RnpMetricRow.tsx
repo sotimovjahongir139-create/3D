@@ -7,6 +7,7 @@ const TREND_STYLE: Record<string, string> = {
   down: "bg-red/10 text-red",
   flat: "bg-ink/5 text-ink/50",
   zero: "bg-ink/5 text-ink/50",
+  pending: "bg-ink/5 text-ink/40",
 };
 
 function formatValue(n: number | null): string {
@@ -40,6 +41,10 @@ function RatioBadge({ ratio }: { ratio: RnpMetricRowData["ratio"] }) {
     case "zero":
       icon = null;
       label = "0%";
+      break;
+    case "pending":
+      icon = null;
+      label = "—";
       break;
   }
 

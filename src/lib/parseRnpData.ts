@@ -27,10 +27,10 @@
 const DATE_RANGE_RE = /(\d{2})\.(\d{2})\.(\d{4})\s*-\s*(\d{2})\.(\d{2})\.(\d{4})/;
 const WEEK_BLOCK_WIDTH = 3; // Reja | Fakt | Nisbat
 
-export type Trend = "up" | "down" | "flat" | "zero" | "new";
+export type Trend = "up" | "down" | "flat" | "zero" | "new" | "pending";
 
 export type RnpRatio = {
-  percent: number | null; // null when trend === "new" (division by zero, undefined %)
+  percent: number | null; // null when trend is "new" (division by zero) or "pending" (not entered yet)
   trend: Trend;
 };
 
@@ -132,6 +132,9 @@ function pickCurrentAndPreviousWeek(blocks: WeekBlock[], now: Date): { current: 
  * ratio_percent = ((currentFact - previousFact) / previousFact) * 100
  *
  * Special cases:
+ * - currentFact === null (cell genuinely empty) -> "pending" trend (gray, no arrow,
+ *   shown as "—"). The current week is usually still in progress, so an empty Fakt
+ *   cell means "not entered yet", NOT "dropped to zero" — must not be scored as -100%.
  * - previousFact == 0 && currentFact == 0 -> 0%, "zero" trend (gray, no arrow)
  * - previousFact == 0 && currentFact > 0  -> "new" trend (green, up arrow, shown as "Yangi")
  * - result > 0  -> "up" (green, up arrow)
@@ -139,8 +142,10 @@ function pickCurrentAndPreviousWeek(blocks: WeekBlock[], now: Date): { current: 
  * - result == 0 -> "flat" (gray, flat arrow)
  */
 export function computeRatio(previousFact: number | null, currentFact: number | null): RnpRatio {
+  if (currentFact === null) return { percent: null, trend: "pending" };
+
   const prev = previousFact ?? 0;
-  const curr = currentFact ?? 0;
+  const curr = currentFact;
 
   if (prev === 0 && curr === 0) return { percent: 0, trend: "zero" };
   if (prev === 0 && curr > 0) return { percent: null, trend: "new" };
