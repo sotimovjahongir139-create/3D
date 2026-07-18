@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: "/department/mold", label: "Qolip bo'limi", roles: ["admin", "dept_mold"] },
   { href: "/department/sales", label: "Sotuv bo'limi", roles: ["admin", "dept_sales"] },
   { href: "/admin/models", label: "Admin", roles: ["admin"] },
+  { href: "/rnp", label: "RNP", roles: ["admin"] },
 ];
 
 export function Navbar() {
