@@ -37,6 +37,7 @@ const DAY_PX = 10;
 const STICKY_COL_PX = 200;
 const THUMB_SIZE = 40;
 const MIN_SEGMENT_PX = 3 * DAY_PX;
+const FALLBACK_DURATION_DAYS = 14; // used only when a stage has no deadline set yet
 const BACK_MONTHS = 1;
 const FORWARD_MONTHS = 3;
 
@@ -59,10 +60,13 @@ export function GanttChart({ items }: GanttChartProps) {
           }));
 
         const currentStart = startOfDay(parseISO(item.stageStart));
-        const currentEnd = maxDate([today, addDays(currentStart, 1)]);
+        const deadline = item.deadline ? startOfDay(parseISO(item.deadline)) : null;
+        // Bars are a static planned schedule: width is fixed from start -> due date,
+        // computed once from the data, never recalculated against today.
+        const plannedEnd = deadline ?? addDays(currentStart, FALLBACK_DURATION_DAYS);
+        const currentEnd = plannedEnd > currentStart ? plannedEnd : addDays(currentStart, 1);
         segments.push({ stage: item.currentStage, start: currentStart, end: currentEnd });
 
-        const deadline = item.deadline ? startOfDay(parseISO(item.deadline)) : null;
         const overdue = deadline ? today > deadline : false;
 
         return {
@@ -195,6 +199,9 @@ export function GanttChart({ items }: GanttChartProps) {
                     >
                       <ModelThumb src={bar.modelImageUrl} alt={bar.modelName} size={THUMB_SIZE} rounded="lg" />
                       <span className="text-xs font-medium text-ink truncate">{bar.modelName}</span>
+                      {bar.overdue && (
+                        <AlertTriangle size={13} strokeWidth={2.5} className="text-red shrink-0" aria-label="Kechikkan" />
+                      )}
                     </button>
                     <div className="relative h-full shrink-0" style={{ width: totalWidth }}>
                       {bar.segments.map((segment, si) => {
@@ -219,10 +226,9 @@ export function GanttChart({ items }: GanttChartProps) {
                       })}
                       {bar.deadlineDate && deadlineOffsetPx !== null && (
                         <span
-                          className="absolute top-0.5 -translate-x-1/2 flex items-center gap-0.5 text-[10px] font-bold text-red whitespace-nowrap"
+                          className="absolute top-0.5 -translate-x-1/2 text-[10px] font-bold text-red whitespace-nowrap"
                           style={{ left: deadlineOffsetPx }}
                         >
-                          {bar.overdue && <AlertTriangle size={10} strokeWidth={2.5} />}
                           {bar.deadlineDate.getDate()}
                         </span>
                       )}
