@@ -35,7 +35,7 @@ const STAGE_BAR_COLOR: Record<string, string> = {
 
 const DAY_PX = 10;
 const STICKY_COL_PX = 200;
-const THUMB_SIZE = 40;
+const THUMB_SIZE = 26;
 const MIN_SEGMENT_PX = 3 * DAY_PX;
 const FALLBACK_DURATION_DAYS = 14; // used only when a stage has no deadline set yet
 const BACK_MONTHS = 1;
@@ -124,6 +124,22 @@ export function GanttChart({ items }: GanttChartProps) {
   const totalWidth = totalDays * DAY_PX;
   const todayOffsetPx = differenceInCalendarDays(today, rangeStart) * DAY_PX;
 
+  // Vertical gridlines for the body rows, computed once (not per row): a strong
+  // line at each month start, thin lines at the week subdivisions within it.
+  const gridLines = useMemo(() => {
+    const lines: { offsetPx: number; strong: boolean }[] = [];
+    months.forEach((month) => {
+      const monthOffsetPx = differenceInCalendarDays(month.start, rangeStart) * DAY_PX;
+      lines.push({ offsetPx: monthOffsetPx, strong: true });
+      let acc = monthOffsetPx;
+      month.weeks.slice(0, -1).forEach((days) => {
+        acc += days * DAY_PX;
+        lines.push({ offsetPx: acc, strong: false });
+      });
+    });
+    return lines;
+  }, [months, rangeStart]);
+
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -152,15 +168,18 @@ export function GanttChart({ items }: GanttChartProps) {
         <div ref={scrollRef} className="overflow-x-auto">
           <div style={{ width: STICKY_COL_PX + totalWidth }}>
             <div className="flex sticky top-0 z-20 bg-card">
-              <div className="sticky left-0 z-30 bg-card shrink-0 border-b border-ink/5" style={{ width: STICKY_COL_PX }} />
+              <div
+                className="sticky left-0 z-30 bg-card shrink-0 border-b border-r border-ink/15"
+                style={{ width: STICKY_COL_PX }}
+              />
               {months.map((month, i) => (
-                <div key={i} className="border-b border-l border-ink/5" style={{ width: month.totalDays * DAY_PX }}>
+                <div key={i} className="border-b border-l border-ink/15" style={{ width: month.totalDays * DAY_PX }}>
                   <div className="text-center text-xs font-semibold text-ink/70 py-1 whitespace-nowrap">{month.label}</div>
                   <div className="flex">
                     {month.weeks.map((days, wi) => (
                       <div
                         key={wi}
-                        className="text-center text-[10px] text-ink/40 border-l border-ink/5 first:border-l-0 py-0.5"
+                        className="text-center text-[10px] text-ink/40 border-l border-ink/10 first:border-l-0 py-0.5"
                         style={{ width: days * DAY_PX }}
                       >
                         {wi + 1}
@@ -172,12 +191,18 @@ export function GanttChart({ items }: GanttChartProps) {
             </div>
 
             <div className="relative">
+              {gridLines.map((line, i) => (
+                <div
+                  key={i}
+                  className={`pointer-events-none absolute top-0 bottom-0 w-px ${line.strong ? "bg-ink/15" : "bg-ink/8"}`}
+                  style={{ left: STICKY_COL_PX + line.offsetPx }}
+                />
+              ))}
               <div
                 className="pointer-events-none absolute top-0 bottom-0 w-px bg-primary/40 z-10"
                 style={{ left: STICKY_COL_PX + todayOffsetPx }}
               />
               {bars.map((bar) => {
-                const deadlineOffsetPx = bar.deadlineDate ? differenceInCalendarDays(bar.deadlineDate, rangeStart) * DAY_PX : null;
                 const openDetail = () =>
                   setSelectedDetail({
                     name: bar.modelName,
@@ -189,11 +214,11 @@ export function GanttChart({ items }: GanttChartProps) {
                   });
 
                 return (
-                  <div key={bar.id} className="flex items-center border-b border-ink/5 last:border-0 h-12 relative">
+                  <div key={bar.id} className="flex items-center border-b border-ink/15 h-9 relative">
                     <button
                       type="button"
                       onClick={openDetail}
-                      className="sticky left-0 z-10 bg-card shrink-0 px-3 flex items-center gap-2 h-full text-left hover:bg-bg"
+                      className="sticky left-0 z-10 bg-card shrink-0 border-r border-ink/15 px-3 flex items-center gap-2 h-full text-left hover:bg-bg"
                       style={{ width: STICKY_COL_PX }}
                       title={bar.modelName}
                     >
@@ -211,12 +236,12 @@ export function GanttChart({ items }: GanttChartProps) {
                           MIN_SEGMENT_PX
                         );
                         const isLast = si === bar.segments.length - 1;
-                        const overdueRing = isLast && bar.overdue ? "ring-2 ring-ink/70 ring-offset-1 ring-offset-card" : "";
+                        const overdueRing = isLast && bar.overdue ? "ring-inset ring-2 ring-ink/80" : "";
 
                         return (
                           <div
                             key={si}
-                            className={`absolute top-1/2 -translate-y-1/2 h-5 rounded cursor-pointer ${STAGE_BAR_COLOR[segment.stage] ?? "bg-ink/30"} ${overdueRing}`}
+                            className={`absolute inset-y-0 cursor-pointer ${STAGE_BAR_COLOR[segment.stage] ?? "bg-ink/30"} ${overdueRing}`}
                             style={{ left: segOffsetPx, width: segWidthPx }}
                             onMouseEnter={() => setActiveTooltip(bar.id)}
                             onMouseLeave={() => setActiveTooltip(null)}
@@ -224,14 +249,6 @@ export function GanttChart({ items }: GanttChartProps) {
                           />
                         );
                       })}
-                      {bar.deadlineDate && deadlineOffsetPx !== null && (
-                        <span
-                          className="absolute top-0.5 -translate-x-1/2 text-[10px] font-bold text-red whitespace-nowrap"
-                          style={{ left: deadlineOffsetPx }}
-                        >
-                          {bar.deadlineDate.getDate()}
-                        </span>
-                      )}
                       {activeTooltip === bar.id && (
                         <div
                           className="absolute -top-2 -translate-y-full z-30 rounded-xl bg-ink px-3 py-2 text-xs text-white shadow-lg whitespace-nowrap"
