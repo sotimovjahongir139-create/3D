@@ -150,7 +150,7 @@ export function GanttChart({ items }: GanttChartProps) {
   return (
     <div className="bg-card rounded-3xl shadow-sm overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-4 border-b border-ink/5">
-        <h3 className="font-display font-bold text-ink text-sm sm:text-base">Kechikkan bandlar — jadval</h3>
+        <h3 className="font-display font-bold text-ink text-sm sm:text-base">Gantt chart</h3>
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowFullHistory((v) => !v)}

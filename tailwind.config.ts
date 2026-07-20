@@ -12,10 +12,10 @@ const config: Config = {
         bg: "#F3F4F6",
         card: "#FFFFFF",
         ink: "#111827",
-        primary: "#5B4FE9",
+        primary: "#7C3AED",
         orange: "#F5A623",
-        blue: "#4F8EF7",
-        green: "#22C55E",
+        blue: "#0EA5E9",
+        green: "#10B981",
         red: "#EF4444",
       },
       fontFamily: {

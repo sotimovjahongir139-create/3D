@@ -2,8 +2,8 @@ import { STAGE_META } from "@/lib/stageMeta";
 
 const BAR_COLOR: Record<string, string> = {
   orange: "#F5A623",
-  blue: "#4F8EF7",
-  green: "#22C55E",
+  blue: "#0EA5E9",
+  green: "#10B981",
 };
 
 const BADGE_CLASSES: Record<string, string> = {

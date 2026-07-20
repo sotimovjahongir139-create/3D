@@ -21,7 +21,7 @@ export function SemiDonutGauge({ percentage }: { percentage: number }) {
     <div className="flex flex-col items-center">
       <svg viewBox="0 0 200 115" className="w-full max-w-[220px]">
         <path d={describeArc(cx, cy, r, 180, 360)} stroke="#F3F4F6" strokeWidth={16} fill="none" strokeLinecap="round" />
-        <path d={describeArc(cx, cy, r, 180, angle)} stroke="#5B4FE9" strokeWidth={16} fill="none" strokeLinecap="round" />
+        <path d={describeArc(cx, cy, r, 180, angle)} stroke="#7C3AED" strokeWidth={16} fill="none" strokeLinecap="round" />
       </svg>
       <div className="-mt-10 text-center">
         <div className="font-display text-3xl font-extrabold text-ink">{Math.round(pct)}%</div>
