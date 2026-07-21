@@ -14,6 +14,12 @@ import { requireRole } from "@/lib/api";
 // often stored sideways/upside-down with an EXIF rotation flag that isn't
 // baked into the pixels) and capped to a sane max dimension.
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif"]);
+const EXT_BY_TYPE: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
 const HEIC_EXT_RE = /\.(heic|heif)$/i;
 const MAX_SIZE = 20 * 1024 * 1024; // mobile camera originals run larger than desktop exports
 const MAX_DIMENSION = 1600;
@@ -64,31 +70,43 @@ export async function POST(req: NextRequest) {
       const converted = await heicConvert({ buffer: inputBuffer, format: "JPEG", quality: 0.92 });
       inputBuffer = Buffer.from(converted);
     } catch (err) {
-      console.error("[upload] HEIC decode failed:", err);
+      // No fallback possible here - the browser genuinely cannot render raw
+      // HEIC bytes, so if we can't decode them the upload has to fail.
+      console.error("[upload] HEIC decode failed:", err instanceof Error ? err.stack ?? err.message : err);
       return NextResponse.json({ error: "HEIC faylni o'qib bo'lmadi" }, { status: 400 });
     }
   }
 
-  let outputBuffer: Buffer;
+  // Resize/re-orient is a "should", not a "must": the input at this point is
+  // always something a browser can already render (a real image/* type, or
+  // heic-convert's JPEG output). If sharp itself throws for any reason - a
+  // native-binary/platform issue, an unusual color profile, a corrupt EXIF
+  // block - fall back to saving those already-valid bytes as-is rather than
+  // failing the whole upload over a cosmetic normalization step.
+  let outputBuffer: Buffer = inputBuffer;
+  let extension = heic ? "jpg" : EXT_BY_TYPE[file.type] ?? "jpg";
   try {
     outputBuffer = await sharp(inputBuffer)
       .rotate() // auto-orient from EXIF, then strip the orientation tag
       .resize({ width: MAX_DIMENSION, height: MAX_DIMENSION, fit: "inside", withoutEnlargement: true })
       .jpeg({ quality: JPEG_QUALITY })
       .toBuffer();
+    extension = "jpg";
   } catch (err) {
-    console.error("[upload] image normalization failed:", err);
-    return NextResponse.json({ error: "Rasmni qayta ishlashda xatolik yuz berdi" }, { status: 400 });
+    console.error(
+      "[upload] sharp normalization failed, saving original bytes instead:",
+      err instanceof Error ? err.stack ?? err.message : err
+    );
   }
 
-  const filename = `${randomUUID()}.jpg`;
+  const filename = `${randomUUID()}.${extension}`;
   const filepath = path.join(process.cwd(), "public", "uploads", filename);
 
   try {
     await writeFile(filepath, outputBuffer);
     console.log(`[upload] saved ${outputBuffer.length} bytes to ${filepath}`);
   } catch (err) {
-    console.error(`[upload] failed to write file to ${filepath}:`, err);
+    console.error(`[upload] failed to write file to ${filepath}:`, err instanceof Error ? err.stack ?? err.message : err);
     return NextResponse.json({ error: "Faylni saqlashda xatolik yuz berdi" }, { status: 500 });
   }
 

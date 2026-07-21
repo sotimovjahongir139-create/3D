@@ -37,7 +37,6 @@ const STAGE_BAR_COLOR: Record<string, string> = {
 const DAY_PX = 10;
 const STICKY_COL_PX = 200;
 const THUMB_SIZE = 26;
-const FALLBACK_DURATION_DAYS = 14; // used only when a stage has no deadline set yet
 const BACK_MONTHS = 1;
 const FORWARD_MONTHS = 3;
 
@@ -77,16 +76,20 @@ export function GanttChart({ items }: GanttChartProps) {
 
         const explicitStart = item.stageStart ? startOfDay(parseISO(item.stageStart)) : null;
         const itemDeadline = item.deadline ? startOfDay(parseISO(item.deadline)) : null;
-        // Bars are a static planned schedule: width is fixed from start -> due date,
-        // computed once from the data, never recalculated against today. When there's
-        // no real start date, pin the segment to the due date itself rather than
-        // fabricating a start - that collapses it to a single compact week-cell
-        // instead of stretching from some arbitrary point to the due date.
-        const effectiveStart = explicitStart ?? itemDeadline;
-        if (effectiveStart) {
-          const plannedEnd = itemDeadline ?? addDays(effectiveStart, FALLBACK_DURATION_DAYS);
-          const currentEnd = plannedEnd > effectiveStart ? plannedEnd : addDays(effectiveStart, 1);
-          segments.push({ stage: item.currentStage, start: effectiveStart, end: currentEnd });
+        // Bars are a static planned schedule, computed once from the data, never
+        // recalculated against today. With both dates known, the bar spans start
+        // -> due exactly. With only ONE date known (no start yet, or a deadline
+        // that hasn't been set again after a stage transition), there is no
+        // second point to draw a real span between - fabricating one (e.g. a
+        // guessed multi-week window) would stretch the bar with a width that
+        // doesn't correspond to any real date, which is the bug. Pin it to a
+        // single-point marker at whichever one date is actually known instead.
+        if (explicitStart && itemDeadline) {
+          const end = itemDeadline > explicitStart ? itemDeadline : addDays(explicitStart, 1);
+          segments.push({ stage: item.currentStage, start: explicitStart, end });
+        } else if (explicitStart || itemDeadline) {
+          const onlyDate = (explicitStart ?? itemDeadline)!;
+          segments.push({ stage: item.currentStage, start: onlyDate, end: onlyDate });
         }
       });
 
@@ -124,6 +127,18 @@ export function GanttChart({ items }: GanttChartProps) {
     });
   }, [items, today]);
 
+  // Sotuv-stage models always float to the top, above everything still in
+  // 3D/Qolip; sort is stable so relative order otherwise is unaffected. This
+  // re-runs on every render, so a model moving into Sotuv jumps up on the
+  // very next render with no manual re-sort needed.
+  const sortedBars = useMemo(() => {
+    return [...bars].sort((a, b) => {
+      const aSales = a.currentStage === "stage_sales" ? 0 : 1;
+      const bSales = b.currentStage === "stage_sales" ? 0 : 1;
+      return aSales - bSales;
+    });
+  }, [bars]);
+
   const defaultRangeStart = useMemo(() => startOfMonth(subMonths(today, BACK_MONTHS)), [today]);
   const defaultRangeEnd = useMemo(() => endOfMonth(addMonths(today, FORWARD_MONTHS)), [today]);
 
@@ -134,8 +149,13 @@ export function GanttChart({ items }: GanttChartProps) {
   }, [showFullHistory, bars, defaultRangeStart]);
 
   const rangeEnd = useMemo(() => {
-    const deadlines = bars.map((b) => b.deadlineDate).filter((d): d is Date => d !== null);
-    const furthest = deadlines.length ? maxDate(deadlines) : defaultRangeEnd;
+    // Must cover every segment's own end date, not just the primary item's
+    // deadline - a model with only a start date (no deadline) still has a
+    // real date that needs to be on the grid. Missing it here would silently
+    // clamp cellIndexForDate to the last visible cell instead of the correct
+    // one, which is exactly the kind of "wrong week" bug this guards against.
+    const segmentEnds = bars.flatMap((b) => b.segments.map((s) => s.end));
+    const furthest = segmentEnds.length ? maxDate(segmentEnds) : defaultRangeEnd;
     return endOfMonth(maxDate([furthest, defaultRangeEnd, today]));
   }, [bars, defaultRangeEnd, today]);
 
@@ -266,7 +286,7 @@ export function GanttChart({ items }: GanttChartProps) {
                 className="pointer-events-none absolute top-0 bottom-0 w-px bg-primary/40 z-10"
                 style={{ left: STICKY_COL_PX + todayOffsetPx }}
               />
-              {bars.map((bar) => {
+              {sortedBars.map((bar) => {
                 const openDetail = () =>
                   setSelectedDetail({
                     name: bar.modelName,
