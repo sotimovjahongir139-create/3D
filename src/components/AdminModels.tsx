@@ -302,7 +302,6 @@ export function AdminModels() {
             type="date"
             value={stageStart}
             onChange={(e) => setStageStart(e.target.value)}
-            required
             className="w-full rounded-xl border border-ink/10 bg-bg px-3 py-2 text-sm focus:border-primary focus:outline-none"
           />
         </div>
