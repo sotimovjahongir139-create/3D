@@ -46,8 +46,10 @@ model ProductionItem {
 }
 
 enum Stage {
+  stage_umarxon
   stage_3d
   stage_mold
+  stage_tayorlash
   stage_sales
 }
 

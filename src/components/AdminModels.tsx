@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { format } from "date-fns";
-import { Pencil, Trash2, ImagePlus, X } from "lucide-react";
+import { Pencil, Trash2, ImagePlus, Workflow, X } from "lucide-react";
 import { StageBadge } from "@/components/StageBadge";
 import { StatusBadge } from "@/components/StatusBadge";
 import { TableCard } from "@/components/TableCard";
@@ -32,10 +32,20 @@ const SORT_OPTIONS = [
 ];
 
 const STAGE_OPTIONS = [
+  { value: "umarxon", label: "Umarxon" },
   { value: "3d", label: "3D" },
   { value: "mold", label: "Qolip" },
+  { value: "tayorlash", label: "Sotuvga tayorlash" },
   { value: "sales", label: "Sotuv" },
 ];
+
+const STAGE_KEY_BY_ENUM: Record<string, string> = {
+  stage_umarxon: "umarxon",
+  stage_3d: "3d",
+  stage_mold: "mold",
+  stage_tayorlash: "tayorlash",
+  stage_sales: "sales",
+};
 
 function today() {
   return format(new Date(), "yyyy-MM-dd");
@@ -59,7 +69,7 @@ function isHeic(file: File): boolean {
 export function AdminModels() {
   const [models, setModels] = useState<ModelRow[]>([]);
   const [name, setName] = useState("");
-  const [stage, setStage] = useState("3d");
+  const [stage, setStage] = useState("umarxon");
   const [stageStart, setStageStart] = useState(today());
   const [deadline, setDeadline] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -75,6 +85,9 @@ export function AdminModels() {
   const [deleting, setDeleting] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState<ModelDetail | null>(null);
   const [editingModel, setEditingModel] = useState<{ id: string; name: string; imageUrl: string | null } | null>(null);
+  const [editingStageItem, setEditingStageItem] = useState<{ id: string; name: string } | null>(null);
+  const [editStageValue, setEditStageValue] = useState("3d");
+  const [editStageSubmitting, setEditStageSubmitting] = useState(false);
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
   const [editImageError, setEditImageError] = useState<string | null>(null);
@@ -186,7 +199,7 @@ export function AdminModels() {
     console.log(`[upload] model created successfully with imageUrl=${imageUrl}`);
 
     setName("");
-    setStage("3d");
+    setStage("umarxon");
     setStageStart(today());
     setDeadline("");
     setImageFile(null);
@@ -290,6 +303,19 @@ export function AdminModels() {
     });
     setEditingItemId(null);
     setEditDeadlineValue("");
+    load();
+  }
+
+  async function handleStageSave() {
+    if (!editingStageItem) return;
+    setEditStageSubmitting(true);
+    await fetch(`/api/items/${editingStageItem.id}/stage`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ stage: editStageValue }),
+    });
+    setEditStageSubmitting(false);
+    setEditingStageItem(null);
     load();
   }
 
@@ -486,6 +512,17 @@ export function AdminModels() {
                       </button>
                       <button
                         onClick={() => {
+                          setEditingStageItem({ id: item.id, name: model.name });
+                          setEditStageValue(STAGE_KEY_BY_ENUM[item.currentStage] ?? "3d");
+                        }}
+                        aria-label="Bosqichni o'zgartirish"
+                        title="Bosqichni o'zgartirish"
+                        className="rounded-full p-2 text-ink/40 hover:bg-bg hover:text-primary"
+                      >
+                        <Workflow size={15} strokeWidth={1.75} />
+                      </button>
+                      <button
+                        onClick={() => {
                           setEditingItemId(item.id);
                           setEditDeadlineValue(item.deadline ? format(new Date(item.deadline), "yyyy-MM-dd") : "");
                         }}
@@ -620,6 +657,51 @@ export function AdminModels() {
                 className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
               >
                 Saqlash
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingStageItem && (
+        <div className="fixed inset-0 z-30 flex items-center justify-center bg-ink/40 px-4">
+          <div className="w-full max-w-sm rounded-3xl bg-card p-6 shadow-lg">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="font-display font-bold text-ink">Bosqichni o&apos;zgartirish</h3>
+              <button
+                onClick={() => setEditingStageItem(null)}
+                aria-label="Yopish"
+                className="rounded-full p-1.5 text-ink/40 hover:bg-bg hover:text-ink"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <p className="mb-3 text-sm text-ink/70">{editingStageItem.name}</p>
+            <label className="block text-xs font-medium text-ink/60 mb-1.5">Yangi bosqich</label>
+            <select
+              value={editStageValue}
+              onChange={(e) => setEditStageValue(e.target.value)}
+              className="w-full rounded-xl border border-ink/10 bg-bg px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            >
+              {STAGE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => setEditingStageItem(null)}
+                className="rounded-full border border-ink/10 px-4 py-2 text-sm font-medium text-ink/70 hover:bg-bg"
+              >
+                Bekor qilish
+              </button>
+              <button
+                onClick={handleStageSave}
+                disabled={editStageSubmitting}
+                className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-60"
+              >
+                {editStageSubmitting ? "Saqlanmoqda..." : "Saqlash"}
               </button>
             </div>
           </div>

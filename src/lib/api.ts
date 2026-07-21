@@ -13,7 +13,9 @@ export async function requireRole(roles: string[]) {
 }
 
 export const STAGE_MAP: Record<string, string> = {
+  umarxon: "stage_umarxon",
   "3d": "stage_3d",
   mold: "stage_mold",
+  tayorlash: "stage_tayorlash",
   sales: "stage_sales",
 };

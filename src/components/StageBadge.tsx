@@ -1,8 +1,10 @@
 import { STAGE_META } from "@/lib/stageMeta";
 
 const TONE_CLASSES: Record<string, string> = {
+  yellow: "bg-yellow/10 text-yellow",
   orange: "bg-orange/10 text-orange",
   blue: "bg-blue/10 text-blue",
+  teal: "bg-teal/10 text-teal",
   green: "bg-green/10 text-green",
 };
 

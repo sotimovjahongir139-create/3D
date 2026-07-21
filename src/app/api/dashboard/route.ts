@@ -15,9 +15,11 @@ export async function GET() {
   const scopedStage = ROLE_STAGE[user!.role];
   const stageWhere = scopedStage ? { currentStage: scopedStage as never } : {};
 
-  const [stage3d, stageMold, stageSales, overdueItems, upcomingItems, activeItems] = await Promise.all([
+  const [stageUmarxon, stage3d, stageMold, stageTayorlash, stageSales, overdueItems, upcomingItems, activeItems] = await Promise.all([
+    prisma.productionItem.count({ where: { currentStage: "stage_umarxon" } }),
     prisma.productionItem.count({ where: { currentStage: "stage_3d" } }),
     prisma.productionItem.count({ where: { currentStage: "stage_mold" } }),
+    prisma.productionItem.count({ where: { currentStage: "stage_tayorlash" } }),
     prisma.productionItem.count({ where: { currentStage: "stage_sales" } }),
     prisma.productionItem.findMany({
       where: {
@@ -49,10 +51,16 @@ export async function GET() {
 
   const totalItems = await prisma.productionItem.count(stageWhere.currentStage ? { where: stageWhere } : undefined);
 
+  const allCounts = {
+    stage_umarxon: stageUmarxon,
+    stage_3d: stage3d,
+    stage_mold: stageMold,
+    stage_tayorlash: stageTayorlash,
+    stage_sales: stageSales,
+  };
+
   return NextResponse.json({
-    countsByStage: user!.role === "admin"
-      ? { stage_3d: stage3d, stage_mold: stageMold, stage_sales: stageSales }
-      : { [scopedStage]: { stage_3d: stage3d, stage_mold: stageMold, stage_sales: stageSales }[scopedStage] },
+    countsByStage: user!.role === "admin" ? allCounts : { [scopedStage]: allCounts[scopedStage as keyof typeof allCounts] },
     totalItems,
     overdueCount: overdueItems.length,
     overdueItems,

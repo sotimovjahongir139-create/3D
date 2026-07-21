@@ -1,10 +1,12 @@
 export const STAGE_LABELS: Record<string, string> = {
+  stage_umarxon: "Umarxon",
   stage_3d: "3D",
   stage_mold: "Qolip",
+  stage_tayorlash: "Sotuvga tayorlash",
   stage_sales: "Sotuv",
 };
 
-export const STAGE_ORDER = ["stage_3d", "stage_mold", "stage_sales"] as const;
+export const STAGE_ORDER = ["stage_umarxon", "stage_3d", "stage_mold", "stage_tayorlash", "stage_sales"] as const;
 
 export const ROLE_LABELS: Record<string, string> = {
   admin: "Admin",

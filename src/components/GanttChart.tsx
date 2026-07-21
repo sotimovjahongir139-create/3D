@@ -29,10 +29,22 @@ const UZ_MONTHS = [
 ];
 
 const STAGE_BAR_COLOR: Record<string, string> = {
+  stage_umarxon: "bg-yellow",
   stage_3d: "bg-red",
   stage_mold: "bg-blue",
+  stage_tayorlash: "bg-teal",
   stage_sales: "bg-green",
 };
+
+// Yellow reads poorly with white text - every other bar color is dark enough
+// for white, so only this one needs a dark-text override for legibility.
+const STAGE_BAR_TEXT_COLOR: Record<string, string> = {
+  stage_umarxon: "text-black",
+};
+
+// Final-stage models (post-production, awaiting or completed sale) always
+// float to the top of the Gantt list, above everything still upstream.
+const TOP_SORT_STAGES = new Set(["stage_tayorlash", "stage_sales"]);
 
 const DAY_PX = 10;
 const STICKY_COL_PX = 200;
@@ -127,15 +139,16 @@ export function GanttChart({ items }: GanttChartProps) {
     });
   }, [items, today]);
 
-  // Sotuv-stage models always float to the top, above everything still in
-  // 3D/Qolip; sort is stable so relative order otherwise is unaffected. This
-  // re-runs on every render, so a model moving into Sotuv jumps up on the
-  // very next render with no manual re-sort needed.
+  // Sotuvga tayorlash/Sotuv-stage models always float to the top, above
+  // everything still upstream (Umarxon/3D/Qolip); sort is stable so relative
+  // order otherwise is unaffected. This re-runs on every render, so a model
+  // moving into either final stage jumps up on the very next render with no
+  // manual re-sort needed.
   const sortedBars = useMemo(() => {
     return [...bars].sort((a, b) => {
-      const aSales = a.currentStage === "stage_sales" ? 0 : 1;
-      const bSales = b.currentStage === "stage_sales" ? 0 : 1;
-      return aSales - bSales;
+      const aTop = TOP_SORT_STAGES.has(a.currentStage) ? 0 : 1;
+      const bTop = TOP_SORT_STAGES.has(b.currentStage) ? 0 : 1;
+      return aTop - bTop;
     });
   }, [bars]);
 
@@ -342,16 +355,23 @@ export function GanttChart({ items }: GanttChartProps) {
                         const segWidthPx = endCell.offsetPx + endCell.widthPx - startCell.offsetPx;
                         const isLast = si === bar.segments.length - 1;
                         const overdueRing = isLast && bar.overdue ? "ring-inset ring-2 ring-ink/80" : "";
+                        const textColor = STAGE_BAR_TEXT_COLOR[segment.stage] ?? "text-white";
 
                         return (
                           <div
                             key={si}
-                            className={`absolute inset-y-0 cursor-pointer ${STAGE_BAR_COLOR[segment.stage] ?? "bg-ink/30"} ${overdueRing}`}
+                            className={`absolute inset-y-0 cursor-pointer overflow-hidden ${STAGE_BAR_COLOR[segment.stage] ?? "bg-ink/30"} ${overdueRing}`}
                             style={{ left: segOffsetPx, width: segWidthPx }}
                             onMouseEnter={() => setActiveTooltip(bar.id)}
                             onMouseLeave={() => setActiveTooltip(null)}
                             onClick={openDetail}
-                          />
+                          >
+                            <span
+                              className={`flex h-full w-full items-center justify-center truncate px-1 text-[9px] font-semibold leading-none ${textColor}`}
+                            >
+                              {STAGE_LABELS[segment.stage] ?? segment.stage}
+                            </span>
+                          </div>
                         );
                       })}
                       {activeTooltip === bar.id && (
