@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { Bell, Settings, LogOut, Boxes } from "lucide-react";
+import { Bell, Settings, LogOut, Boxes, Sun, Moon } from "lucide-react";
+import { useTheme } from "@/app/providers";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Boshqaruv paneli", roles: ["admin", "dept_3d", "dept_mold", "dept_sales"] },
@@ -17,6 +18,7 @@ const NAV_ITEMS = [
 export function Navbar() {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const { theme, toggleTheme } = useTheme();
   const role = session?.user?.role;
 
   const items = NAV_ITEMS.filter((item) => !role || item.roles.includes(role));
@@ -47,7 +49,7 @@ export function Navbar() {
                 key={item.href}
                 href={item.href}
                 className={`shrink-0 whitespace-nowrap rounded-full px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors ${
-                  active ? "bg-ink text-white" : "text-ink/60 hover:bg-bg"
+                  active ? "bg-primary text-white" : "text-ink/60 hover:bg-bg"
                 }`}
               >
                 {item.label}
@@ -57,6 +59,14 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+          <button
+            onClick={toggleTheme}
+            className="rounded-full p-2 text-ink/50 hover:bg-bg hover:text-ink"
+            aria-label={theme === "dark" ? "Yorug' rejim" : "Qorong'i rejim"}
+            title={theme === "dark" ? "Yorug' rejim" : "Qorong'i rejim"}
+          >
+            {theme === "dark" ? <Sun size={17} strokeWidth={1.75} /> : <Moon size={17} strokeWidth={1.75} />}
+          </button>
           <button className="hidden sm:inline-flex rounded-full p-2 text-ink/50 hover:bg-bg hover:text-ink" aria-label="Bildirishnomalar">
             <Bell size={17} strokeWidth={1.75} />
           </button>

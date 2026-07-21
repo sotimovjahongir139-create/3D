@@ -1,9 +1,9 @@
 import { STAGE_META } from "@/lib/stageMeta";
 
-const BAR_COLOR: Record<string, string> = {
-  orange: "#F5A623",
-  blue: "#0EA5E9",
-  green: "#10B981",
+const BAR_CLASSES: Record<string, string> = {
+  orange: "bg-orange",
+  blue: "bg-blue",
+  green: "bg-green",
 };
 
 const BADGE_CLASSES: Record<string, string> = {
@@ -43,8 +43,8 @@ export function HorizontalStageBars({ counts }: { counts: Record<string, number>
                 </div>
                 <div className="h-2.5 rounded-full bg-bg overflow-hidden">
                   <div
-                    className="h-full rounded-full transition-all"
-                    style={{ width: `${pct}%`, backgroundColor: BAR_COLOR[meta.tone] }}
+                    className={`h-full rounded-full transition-all ${BAR_CLASSES[meta.tone]}`}
+                    style={{ width: `${pct}%` }}
                   />
                 </div>
               </div>

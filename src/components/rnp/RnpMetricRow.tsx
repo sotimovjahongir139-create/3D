@@ -1,5 +1,5 @@
 import { ArrowUp, ArrowDown, Minus } from "lucide-react";
-import type { RnpMetricRow as RnpMetricRowData } from "@/lib/parseRnpData";
+import type { RnpMetricRow as RnpMetricRowData, RnpWeekColumn } from "@/lib/parseRnpData";
 
 const TREND_STYLE: Record<string, string> = {
   up: "bg-green/10 text-green",
@@ -15,7 +15,7 @@ function formatValue(n: number | null): string {
   return n.toLocaleString("uz-UZ");
 }
 
-function RatioBadge({ ratio }: { ratio: RnpMetricRowData["ratio"] }) {
+function RatioBadge({ ratio }: { ratio: RnpWeekColumn["ratio"] }) {
   const style = TREND_STYLE[ratio.trend];
 
   let icon = null;
@@ -49,7 +49,7 @@ function RatioBadge({ ratio }: { ratio: RnpMetricRowData["ratio"] }) {
   }
 
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${style}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap ${style}`}>
       {icon}
       {label}
     </span>
@@ -58,21 +58,19 @@ function RatioBadge({ ratio }: { ratio: RnpMetricRowData["ratio"] }) {
 
 export function RnpMetricRow({ row }: { row: RnpMetricRowData }) {
   return (
-    <div className="grid grid-cols-[1fr_auto_auto_auto] sm:grid-cols-[1fr_100px_100px_110px] items-center gap-3 px-4 sm:px-5 py-3 border-b border-ink/5 last:border-0">
-      <div className="text-sm font-medium text-ink truncate" title={row.metric}>
+    <tr className="border-b border-ink/5 last:border-0">
+      <td className="px-4 sm:px-5 py-3 text-sm font-medium text-ink whitespace-nowrap sticky left-0 bg-card" title={row.metric}>
         {row.metric}
-      </div>
-      <div className="text-right text-xs text-ink/50">
-        <span className="sm:hidden mr-1">Reja:</span>
-        {formatValue(row.currentReja)}
-      </div>
-      <div className="text-right text-sm font-semibold text-ink">
-        <span className="sm:hidden mr-1 text-xs font-normal text-ink/50">Fakt:</span>
-        {formatValue(row.currentFakt)}
-      </div>
-      <div className="flex justify-end">
-        <RatioBadge ratio={row.ratio} />
-      </div>
-    </div>
+      </td>
+      {row.weeks.map((week, i) => (
+        <td key={i} className="px-3 py-3">
+          <div className="flex items-center justify-end gap-3 whitespace-nowrap">
+            <span className="text-xs text-ink/50">{formatValue(week.reja)}</span>
+            <span className="text-sm font-semibold text-ink">{formatValue(week.fakt)}</span>
+            <RatioBadge ratio={week.ratio} />
+          </div>
+        </td>
+      ))}
+    </tr>
   );
 }

@@ -26,6 +26,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="uz">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('arkon-theme');if(t==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body
         className={`${jakarta.variable} ${inter.variable} font-sans antialiased bg-bg text-ink`}
       >

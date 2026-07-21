@@ -251,7 +251,7 @@ export function GanttChart({ items }: GanttChartProps) {
                       })}
                       {activeTooltip === bar.id && (
                         <div
-                          className="absolute -top-2 -translate-y-full z-30 rounded-xl bg-ink px-3 py-2 text-xs text-white shadow-lg whitespace-nowrap"
+                          className="absolute -top-2 -translate-y-full z-30 rounded-xl bg-primary px-3 py-2 text-xs text-white shadow-lg whitespace-nowrap"
                           style={{ left: differenceInCalendarDays(bar.overallStart, rangeStart) * DAY_PX }}
                         >
                           <div className="font-semibold">{bar.modelName}</div>

@@ -72,13 +72,15 @@ export function RnpDashboard() {
     return <div className="bg-card rounded-3xl shadow-sm px-5 py-10 text-center text-sm text-ink/40">Ma&apos;lumot topilmadi</div>;
   }
 
+  const currentWeekLabel = data.weekLabels[data.weekLabels.length - 1] ?? null;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-2 text-sm text-ink/60">
         <Calendar size={15} strokeWidth={2} />
-        {data.currentWeekLabel ? (
+        {currentWeekLabel ? (
           <span>
-            Joriy hafta: <span className="font-semibold text-ink">{data.currentWeekLabel}</span>
+            Joriy hafta: <span className="font-semibold text-ink">{currentWeekLabel}</span>
           </span>
         ) : (
           <span>Joriy hafta aniqlanmadi</span>
@@ -87,7 +89,7 @@ export function RnpDashboard() {
 
       <div className="space-y-4">
         {data.sections.map((section) => (
-          <RnpSection key={section.section} section={section} />
+          <RnpSection key={section.section} section={section} weekLabels={data.weekLabels} />
         ))}
       </div>
     </div>

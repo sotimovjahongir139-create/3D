@@ -5,7 +5,7 @@ import { ChevronDown } from "lucide-react";
 import type { RnpSectionData } from "@/lib/parseRnpData";
 import { RnpMetricRow } from "@/components/rnp/RnpMetricRow";
 
-export function RnpSection({ section }: { section: RnpSectionData }) {
+export function RnpSection({ section, weekLabels }: { section: RnpSectionData; weekLabels: string[] }) {
   const [open, setOpen] = useState(true);
 
   return (
@@ -29,16 +29,36 @@ export function RnpSection({ section }: { section: RnpSectionData }) {
       </button>
 
       {open && (
-        <div className="border-t border-ink/5">
-          <div className="hidden sm:grid grid-cols-[1fr_100px_100px_110px] gap-3 px-5 py-2 text-xs uppercase tracking-wide text-ink/40">
-            <span>Ko&apos;rsatkich</span>
-            <span className="text-right">Reja</span>
-            <span className="text-right">Fakt</span>
-            <span className="text-right">Nisbat</span>
-          </div>
-          {section.metrics.map((row, i) => (
-            <RnpMetricRow key={`${row.metric}-${i}`} row={row} />
-          ))}
+        <div className="border-t border-ink/5 overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="border-b border-ink/5">
+                <th className="sticky left-0 bg-card" />
+                {weekLabels.map((label, i) => (
+                  <th
+                    key={i}
+                    colSpan={1}
+                    className="px-3 pt-2 text-right text-[11px] font-semibold text-ink/60 whitespace-nowrap"
+                  >
+                    {label}
+                  </th>
+                ))}
+              </tr>
+              <tr className="text-[10px] uppercase tracking-wide text-ink/40">
+                <th className="px-4 sm:px-5 pb-2 text-left font-medium sticky left-0 bg-card">Ko&apos;rsatkich</th>
+                {weekLabels.map((_, i) => (
+                  <th key={i} className="px-3 pb-2 text-right font-medium whitespace-nowrap">
+                    Reja&nbsp;&nbsp;&nbsp;Fakt&nbsp;&nbsp;&nbsp;Nisbat
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {section.metrics.map((row, i) => (
+                <RnpMetricRow key={`${row.metric}-${i}`} row={row} />
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

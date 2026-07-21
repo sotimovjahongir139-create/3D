@@ -20,12 +20,16 @@
  * for "DD.MM.YYYY - DD.MM.YYYY" patterns.
  *
  * The "Nisbat" (%) shown by this dashboard is NOT read from the sheet.
- * It is recomputed from current-week fact vs previous-week fact per the
- * rules in computeRatio() below.
+ * It is recomputed from that week's fact vs the fact of the week right
+ * before it, per the rules in computeRatio() below. This dashboard shows
+ * the current week plus the 2 weeks before it (3 columns total); a 4th,
+ * older week is fetched silently just to give the oldest shown week a
+ * baseline to compare against.
  */
 
 const DATE_RANGE_RE = /(\d{2})\.(\d{2})\.(\d{4})\s*-\s*(\d{2})\.(\d{2})\.(\d{4})/;
 const WEEK_BLOCK_WIDTH = 3; // Reja | Fakt | Nisbat
+const WEEKS_SHOWN = 3;
 
 export type Trend = "up" | "down" | "flat" | "zero" | "new" | "pending";
 
@@ -34,12 +38,16 @@ export type RnpRatio = {
   trend: Trend;
 };
 
+export type RnpWeekColumn = {
+  label: string;
+  reja: number | null;
+  fakt: number | null;
+  ratio: RnpRatio;
+};
+
 export type RnpMetricRow = {
   metric: string;
-  currentReja: number | null;
-  currentFakt: number | null;
-  previousFakt: number | null;
-  ratio: RnpRatio;
+  weeks: RnpWeekColumn[]; // oldest -> newest, up to WEEKS_SHOWN entries
 };
 
 export type RnpSectionData = {
@@ -48,8 +56,7 @@ export type RnpSectionData = {
 };
 
 export type RnpParsedData = {
-  currentWeekLabel: string | null;
-  previousWeekLabel: string | null;
+  weekLabels: string[]; // oldest -> newest, matches RnpMetricRow.weeks order
   sections: RnpSectionData[];
 };
 
@@ -111,21 +118,24 @@ function findWeekBlocks(headerRow: unknown[]): WeekBlock[] {
   return blocks;
 }
 
-function pickCurrentAndPreviousWeek(blocks: WeekBlock[], now: Date): { current: WeekBlock | null; previous: WeekBlock | null } {
-  if (blocks.length === 0) return { current: null, previous: null };
+/**
+ * Picks the window of weeks to show: the current week (by date, or the sheet's
+ * last block if today isn't in any of them yet) plus the WEEKS_SHOWN-1 weeks
+ * before it. Returns { window, baseline } where window is oldest -> newest
+ * (what's displayed) and baseline is the block right before window[0], used
+ * only to compute window[0]'s ratio (never displayed itself).
+ */
+function pickWeekWindow(blocks: WeekBlock[], now: Date): { window: WeekBlock[]; baseline: WeekBlock | null } {
+  if (blocks.length === 0) return { window: [], baseline: null };
 
-  const matchIndex = blocks.findIndex((b) => now >= b.start && now <= b.end);
-  if (matchIndex !== -1) {
-    return {
-      current: blocks[matchIndex],
-      previous: matchIndex > 0 ? blocks[matchIndex - 1] : null,
-    };
-  }
+  let currentIndex = blocks.findIndex((b) => now >= b.start && now <= b.end);
+  if (currentIndex === -1) currentIndex = blocks.length - 1;
 
-  // Fallback: sheet hasn't been updated with this week's block yet — use the last one.
-  const last = blocks[blocks.length - 1];
-  const secondToLast = blocks.length > 1 ? blocks[blocks.length - 2] : null;
-  return { current: last, previous: secondToLast };
+  const startIndex = Math.max(0, currentIndex - (WEEKS_SHOWN - 1));
+  const window = blocks.slice(startIndex, currentIndex + 1);
+  const baseline = startIndex > 0 ? blocks[startIndex - 1] : null;
+
+  return { window, baseline };
 }
 
 /**
@@ -140,6 +150,10 @@ function pickCurrentAndPreviousWeek(blocks: WeekBlock[], now: Date): { current: 
  * - result > 0  -> "up" (green, up arrow)
  * - result < 0  -> "down" (red, down arrow)
  * - result == 0 -> "flat" (gray, flat arrow)
+ *
+ * The result is NOT clamped to +/-100% — a metric that more than doubled (or
+ * more than halved) week over week legitimately produces a number outside that
+ * range, and clamping it would just make the displayed number wrong.
  */
 export function computeRatio(previousFact: number | null, currentFact: number | null): RnpRatio {
   if (currentFact === null) return { percent: null, trend: "pending" };
@@ -156,19 +170,19 @@ export function computeRatio(previousFact: number | null, currentFact: number | 
   return { percent: 0, trend: "flat" };
 }
 
-/** Parses the raw RNP tab values into department sections with recomputed weekly ratios. */
+/** Parses the raw RNP tab values into department sections, current week + 2 prior weeks. */
 export function parseRnpData(rawRows: unknown[][], now: Date = new Date()): RnpParsedData {
   if (!rawRows || rawRows.length === 0) {
-    return { currentWeekLabel: null, previousWeekLabel: null, sections: [] };
+    return { weekLabels: [], sections: [] };
   }
 
   const headerRowIndex = findHeaderRowIndex(rawRows);
   if (headerRowIndex === -1) {
-    return { currentWeekLabel: null, previousWeekLabel: null, sections: [] };
+    return { weekLabels: [], sections: [] };
   }
 
   const weekBlocks = findWeekBlocks(rawRows[headerRowIndex]);
-  const { current, previous } = pickCurrentAndPreviousWeek(weekBlocks, now);
+  const { window, baseline } = pickWeekWindow(weekBlocks, now);
 
   const dataStartRow = headerRowIndex + 2; // header row + Reja/Fakt/Nisbat sub-header row
   const sectionsMap = new Map<string, RnpSectionData>();
@@ -183,17 +197,15 @@ export function parseRnpData(rawRows: unknown[][], now: Date = new Date()): RnpP
     if (sectionCell) lastSectionName = sectionCell;
     if (!lastSectionName || !metricCell) continue;
 
-    const currentReja = current ? cellToNumber(row[current.colIndex]) : null;
-    const currentFakt = current ? cellToNumber(row[current.colIndex + 1]) : null;
-    const previousFakt = previous ? cellToNumber(row[previous.colIndex + 1]) : null;
+    const weeks: RnpWeekColumn[] = window.map((block, i) => {
+      const priorBlock = i === 0 ? baseline : window[i - 1];
+      const reja = cellToNumber(row[block.colIndex]);
+      const fakt = cellToNumber(row[block.colIndex + 1]);
+      const priorFakt = priorBlock ? cellToNumber(row[priorBlock.colIndex + 1]) : null;
+      return { label: block.label, reja, fakt, ratio: computeRatio(priorFakt, fakt) };
+    });
 
-    const metricRow: RnpMetricRow = {
-      metric: metricCell,
-      currentReja,
-      currentFakt,
-      previousFakt,
-      ratio: computeRatio(previousFakt, currentFakt),
-    };
+    const metricRow: RnpMetricRow = { metric: metricCell, weeks };
 
     if (!sectionsMap.has(lastSectionName)) {
       sectionsMap.set(lastSectionName, { section: lastSectionName, metrics: [] });
@@ -202,8 +214,7 @@ export function parseRnpData(rawRows: unknown[][], now: Date = new Date()): RnpP
   }
 
   return {
-    currentWeekLabel: current?.label ?? null,
-    previousWeekLabel: previous?.label ?? null,
+    weekLabels: window.map((b) => b.label),
     sections: Array.from(sectionsMap.values()),
   };
 }

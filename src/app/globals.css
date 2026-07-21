@@ -2,12 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  color-scheme: light;
+  --color-bg: 243 244 246;
+  --color-card: 255 255 255;
+  --color-ink: 17 24 39;
+  --color-primary: 124 58 237;
+  --color-orange: 245 166 35;
+  --color-blue: 14 165 233;
+  --color-green: 16 185 129;
+  --color-red: 239 68 68;
+}
+
+.dark {
+  color-scheme: dark;
+  --color-bg: 9 13 26;
+  --color-card: 17 24 44;
+  --color-ink: 226 232 240;
+  /* Accent hues (primary/orange/blue/green/red) intentionally not overridden:
+     they're already vivid/saturated, and solid-fill buttons rely on them
+     staying dark enough for white text. Left against a dark navy surface
+     they read as glowing without any separate tuning, and every existing
+     bg-primary/bg-red/bg-blue/bg-green + text-white combo stays contrast-safe
+     in both themes. */
+}
+
 body {
   font-family: var(--font-inter), sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 :focus-visible {
-  outline: 2px solid #5b4fe9;
+  outline: 2px solid rgb(var(--color-primary));
   outline-offset: 2px;
 }
 

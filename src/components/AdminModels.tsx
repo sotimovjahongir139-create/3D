@@ -41,8 +41,20 @@ function today() {
   return format(new Date(), "yyyy-MM-dd");
 }
 
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif"];
+const HEIC_EXT_RE = /\.(heic|heif)$/i;
+const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // mobile camera originals run larger than desktop exports
+
+function isAcceptableImage(file: File): boolean {
+  if (ALLOWED_IMAGE_TYPES.includes(file.type)) return true;
+  // Some mobile browsers send an empty/generic MIME type for HEIC files.
+  if (!file.type || file.type === "application/octet-stream") return HEIC_EXT_RE.test(file.name);
+  return false;
+}
+
+function isHeic(file: File): boolean {
+  return file.type === "image/heic" || file.type === "image/heif" || HEIC_EXT_RE.test(file.name);
+}
 
 export function AdminModels() {
   const [models, setModels] = useState<ModelRow[]>([]);
@@ -79,11 +91,11 @@ export function AdminModels() {
     setImageError(null);
     setFormError(null);
     if (file) {
-      console.log(`[upload] file selected: name=${file.name} type=${file.type} size=${file.size}`);
-      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-        const message = `Rasm qabul qilinmadi: "${file.name}" fayl turi (${file.type || "noma'lum"}) qo'llab-quvvatlanmaydi. Faqat JPG, PNG, WEBP yoki GIF fayllar qabul qilinadi — model rasmsiz saqlanadi.`;
+      console.log(`[upload] file selected: name=${file.name} type=${file.type || "(bo'sh)"} size=${file.size}`);
+      if (!isAcceptableImage(file)) {
+        const message = `Rasm qabul qilinmadi: "${file.name}" fayl turi (${file.type || "noma'lum"}) qo'llab-quvvatlanmaydi. Faqat JPG, PNG, WEBP, GIF yoki HEIC fayllar qabul qilinadi — model rasmsiz saqlanadi.`;
         console.error(`[upload] client rejected file: unsupported type "${file.type}"`);
-        setImageError("Faqat JPG, PNG, WEBP yoki GIF fayllar qabul qilinadi");
+        setImageError("Faqat JPG, PNG, WEBP, GIF yoki HEIC fayllar qabul qilinadi");
         setFormError(message);
         if (fileInputRef.current) fileInputRef.current.value = "";
         setImageFile(null);
@@ -91,18 +103,24 @@ export function AdminModels() {
         return;
       }
       if (file.size > MAX_IMAGE_SIZE) {
-        const message = `Rasm qabul qilinmadi: "${file.name}" fayl hajmi 5MB dan oshib ketdi — model rasmsiz saqlanadi.`;
+        const message = `Rasm qabul qilinmadi: "${file.name}" fayl hajmi 20MB dan oshib ketdi — model rasmsiz saqlanadi.`;
         console.error(`[upload] client rejected file: too large (${file.size} bytes)`);
-        setImageError("Fayl hajmi 5MB dan oshmasligi kerak");
+        setImageError("Fayl hajmi 20MB dan oshmasligi kerak");
         setFormError(message);
         if (fileInputRef.current) fileInputRef.current.value = "";
         setImageFile(null);
         setImagePreview(null);
         return;
       }
+      // HEIC can't be decoded by <img> in any browser but Safari - the
+      // server converts it on upload, but a local blob-URL preview here
+      // would just render broken. Skip the preview for HEIC specifically.
+      setImageFile(file);
+      setImagePreview(isHeic(file) ? null : URL.createObjectURL(file));
+      return;
     }
-    setImageFile(file);
-    setImagePreview(file ? URL.createObjectURL(file) : null);
+    setImageFile(null);
+    setImagePreview(null);
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -226,6 +244,8 @@ export function AdminModels() {
             {imagePreview ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={imagePreview} alt="" className="h-full w-full object-cover" />
+            ) : imageFile ? (
+              <span className="text-[10px] font-semibold text-primary">HEIC</span>
             ) : (
               <ImagePlus size={18} strokeWidth={1.75} />
             )}
@@ -233,7 +253,7 @@ export function AdminModels() {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/png,image/jpeg,image/webp,image/gif"
+            accept="image/png,image/jpeg,image/webp,image/gif,image/heic,image/heif,.heic,.heif"
             onChange={handleFileChange}
             className="hidden"
           />
