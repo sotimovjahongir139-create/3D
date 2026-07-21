@@ -74,7 +74,13 @@ export function AdminModels() {
   const [deletingModel, setDeletingModel] = useState<{ id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState<ModelDetail | null>(null);
+  const [editingModel, setEditingModel] = useState<{ id: string; name: string; imageUrl: string | null } | null>(null);
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
+  const [editImageError, setEditImageError] = useState<string | null>(null);
+  const [editImageSubmitting, setEditImageSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/models");
@@ -188,6 +194,90 @@ export function AdminModels() {
     setImageError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
     setSubmitting(false);
+    load();
+  }
+
+  function handleEditImageFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    setEditImageError(null);
+    if (file) {
+      console.log(`[upload] edit: file selected: name=${file.name} type=${file.type || "(bo'sh)"} size=${file.size}`);
+      if (!isAcceptableImage(file)) {
+        console.error(`[upload] edit: client rejected file: unsupported type "${file.type}"`);
+        setEditImageError("Faqat JPG, PNG, WEBP, GIF yoki HEIC fayllar qabul qilinadi");
+        if (editFileInputRef.current) editFileInputRef.current.value = "";
+        setEditImageFile(null);
+        setEditImagePreview(null);
+        return;
+      }
+      if (file.size > MAX_IMAGE_SIZE) {
+        console.error(`[upload] edit: client rejected file: too large (${file.size} bytes)`);
+        setEditImageError("Fayl hajmi 20MB dan oshmasligi kerak");
+        if (editFileInputRef.current) editFileInputRef.current.value = "";
+        setEditImageFile(null);
+        setEditImagePreview(null);
+        return;
+      }
+      setEditImageFile(file);
+      setEditImagePreview(isHeic(file) ? null : URL.createObjectURL(file));
+      return;
+    }
+    setEditImageFile(null);
+    setEditImagePreview(null);
+  }
+
+  async function handleEditImageSave() {
+    if (!editingModel) return;
+    if (editImageError) return;
+    setEditImageSubmitting(true);
+
+    // Same /api/upload endpoint and client validation as the create form, so
+    // create and edit can never diverge in how an image is processed.
+    let imageUrl = editingModel.imageUrl;
+    if (editImageFile) {
+      console.log(`[upload] edit: uploading ${editImageFile.name} (${editImageFile.size} bytes)...`);
+      const formData = new FormData();
+      formData.append("file", editImageFile);
+      const uploadRes = await fetch("/api/upload", { method: "POST", body: formData }).catch((err) => {
+        console.error("[upload] edit: network error during upload request:", err);
+        return null;
+      });
+      if (!uploadRes || !uploadRes.ok) {
+        const body = uploadRes ? await uploadRes.json().catch(() => null) : null;
+        console.error(`[upload] edit: upload failed: status=${uploadRes?.status} body=`, body);
+        setEditImageError(body?.error || "Rasmni yuklashda xatolik yuz berdi");
+        setEditImageSubmitting(false);
+        return;
+      }
+      const uploadData = await uploadRes.json();
+      imageUrl = uploadData.url;
+      console.log(`[upload] edit: upload succeeded, url=${imageUrl}`);
+    }
+
+    const patchRes = await fetch(`/api/models/${editingModel.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageUrl }),
+    }).catch((err) => {
+      console.error("[upload] edit: network error during model update request:", err);
+      return null;
+    });
+
+    if (!patchRes || !patchRes.ok) {
+      const body = patchRes ? await patchRes.json().catch(() => null) : null;
+      console.error(`[upload] edit: model update failed: status=${patchRes?.status} body=`, body);
+      setEditImageError(body?.error || "Modelni yangilashda xatolik yuz berdi");
+      setEditImageSubmitting(false);
+      return;
+    }
+    console.log(`[upload] edit: model updated successfully with imageUrl=${imageUrl}`);
+
+    setEditingModel(null);
+    setEditImageFile(null);
+    setEditImagePreview(null);
+    setEditImageError(null);
+    setEditImageSubmitting(false);
+    if (editFileInputRef.current) editFileInputRef.current.value = "";
     load();
   }
 
@@ -387,12 +477,20 @@ export function AdminModels() {
                   <td className="px-5 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <button
+                        onClick={() => setEditingModel({ id: model.id, name: model.name, imageUrl: model.imageUrl })}
+                        aria-label="Rasmni tahrirlash"
+                        title="Rasmni tahrirlash"
+                        className="rounded-full p-2 text-ink/40 hover:bg-bg hover:text-primary"
+                      >
+                        <ImagePlus size={15} strokeWidth={1.75} />
+                      </button>
+                      <button
                         onClick={() => {
                           setEditingItemId(item.id);
                           setEditDeadlineValue(item.deadline ? format(new Date(item.deadline), "yyyy-MM-dd") : "");
                         }}
                         aria-label="Muddatni tahrirlash"
-                        title="Tahrirlash"
+                        title="Muddatni tahrirlash"
                         className="rounded-full p-2 text-ink/40 hover:bg-bg hover:text-primary"
                       >
                         <Pencil size={15} strokeWidth={1.75} />
@@ -420,6 +518,75 @@ export function AdminModels() {
           </tbody>
         </table>
       </TableCard>
+
+      {editingModel && (
+        <div className="fixed inset-0 z-30 flex items-center justify-center bg-ink/40 px-4">
+          <div className="w-full max-w-sm rounded-3xl bg-card p-6 shadow-lg">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="font-display font-bold text-ink">Rasmni tahrirlash</h3>
+              <button
+                onClick={() => {
+                  setEditingModel(null);
+                  setEditImageFile(null);
+                  setEditImagePreview(null);
+                  setEditImageError(null);
+                  if (editFileInputRef.current) editFileInputRef.current.value = "";
+                }}
+                aria-label="Yopish"
+                className="rounded-full p-1.5 text-ink/40 hover:bg-bg hover:text-ink"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <p className="mb-3 text-sm text-ink/70">{editingModel.name}</p>
+            <button
+              type="button"
+              onClick={() => editFileInputRef.current?.click()}
+              className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border border-dashed border-ink/20 bg-bg text-ink/40 hover:border-primary hover:text-primary"
+            >
+              {editImagePreview ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={editImagePreview} alt="" className="h-full w-full object-cover" />
+              ) : editImageFile ? (
+                <span className="text-[10px] font-semibold text-primary">HEIC</span>
+              ) : editingModel.imageUrl ? (
+                <ModelThumb src={editingModel.imageUrl} alt={editingModel.name} size={80} rounded="lg" />
+              ) : (
+                <ImagePlus size={22} strokeWidth={1.75} />
+              )}
+            </button>
+            <input
+              ref={editFileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif,image/heic,image/heif,.heic,.heif"
+              onChange={handleEditImageFileChange}
+              className="hidden"
+            />
+            {editImageError && <p className="mt-1.5 text-[11px] font-medium text-red">{editImageError}</p>}
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setEditingModel(null);
+                  setEditImageFile(null);
+                  setEditImagePreview(null);
+                  setEditImageError(null);
+                  if (editFileInputRef.current) editFileInputRef.current.value = "";
+                }}
+                className="rounded-full border border-ink/10 px-4 py-2 text-sm font-medium text-ink/70 hover:bg-bg"
+              >
+                Bekor qilish
+              </button>
+              <button
+                onClick={handleEditImageSave}
+                disabled={editImageSubmitting || !!editImageError}
+                className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-60"
+              >
+                {editImageSubmitting ? "Saqlanmoqda..." : "Saqlash"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {editingItemId && (
         <div className="fixed inset-0 z-30 flex items-center justify-center bg-ink/40 px-4">
