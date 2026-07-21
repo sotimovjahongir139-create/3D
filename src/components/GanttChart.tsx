@@ -48,50 +48,81 @@ export function GanttChart({ items }: GanttChartProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const today = useMemo(() => startOfDay(new Date()), []);
 
-  const bars = useMemo(
-    () =>
-      items.map((item) => {
-        const segments: Segment[] = [...item.logs]
+  const bars = useMemo(() => {
+    // Multiple ProductionItem records can share the same model name (separate
+    // batches of the same physical model tracked through the stages at
+    // different times). The Gantt merges every item with an identical model
+    // name into one row, combining all of their segments - one row per model
+    // name, not one row per database record.
+    const groups = new Map<string, GanttItem[]>();
+    items.forEach((item) => {
+      const key = item.model.name;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(item);
+    });
+
+    return Array.from(groups.entries()).map(([name, groupItems]) => {
+      const segments: Segment[] = [];
+
+      groupItems.forEach((item) => {
+        [...item.logs]
           .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
-          .map((log) => ({
-            stage: log.stage,
-            start: startOfDay(parseISO(log.startDate)),
-            end: startOfDay(parseISO(log.endDate)),
-          }));
+          .forEach((log) => {
+            segments.push({
+              stage: log.stage,
+              start: startOfDay(parseISO(log.startDate)),
+              end: startOfDay(parseISO(log.endDate)),
+            });
+          });
 
         const explicitStart = item.stageStart ? startOfDay(parseISO(item.stageStart)) : null;
-        const deadline = item.deadline ? startOfDay(parseISO(item.deadline)) : null;
+        const itemDeadline = item.deadline ? startOfDay(parseISO(item.deadline)) : null;
         // Bars are a static planned schedule: width is fixed from start -> due date,
         // computed once from the data, never recalculated against today. When there's
         // no real start date, pin the segment to the due date itself rather than
         // fabricating a start - that collapses it to a single compact week-cell
         // instead of stretching from some arbitrary point to the due date.
-        const effectiveStart = explicitStart ?? deadline;
+        const effectiveStart = explicitStart ?? itemDeadline;
         if (effectiveStart) {
-          const plannedEnd = deadline ?? addDays(effectiveStart, FALLBACK_DURATION_DAYS);
+          const plannedEnd = itemDeadline ?? addDays(effectiveStart, FALLBACK_DURATION_DAYS);
           const currentEnd = plannedEnd > effectiveStart ? plannedEnd : addDays(effectiveStart, 1);
           segments.push({ stage: item.currentStage, start: effectiveStart, end: currentEnd });
         }
+      });
 
-        const overdue = deadline ? today > deadline : false;
+      // Segments must read left-to-right in the order the model actually
+      // moved through them, regardless of which underlying item they came
+      // from or the order items were returned in.
+      segments.sort((a, b) => a.start.getTime() - b.start.getTime());
 
-        return {
-          id: item.id,
-          modelName: item.model.name,
-          modelCategory: item.model.category,
-          modelImageUrl: item.model.imageUrl,
-          currentStage: item.currentStage,
-          stageStart: item.stageStart,
-          stageLabel: STAGE_LABELS[item.currentStage] ?? item.currentStage,
-          deadline: item.deadline,
-          deadlineDate: deadline,
-          overdue,
-          segments,
-          overallStart: segments[0]?.start ?? today,
-        };
-      }),
-    [items, today]
-  );
+      // The item whose own timeline starts latest represents the model's
+      // current, most-relevant state - it drives the sticky column's overdue
+      // icon, the tooltip, and what the detail modal shows on click.
+      const itemSortKey = (item: GanttItem) => {
+        const d = item.stageStart ?? item.deadline;
+        return d ? parseISO(d).getTime() : 0;
+      };
+      const primary = groupItems.reduce((latest, item) => (itemSortKey(item) > itemSortKey(latest) ? item : latest));
+
+      const deadline = primary.deadline ? startOfDay(parseISO(primary.deadline)) : null;
+      const overdue = deadline ? today > deadline : false;
+
+      return {
+        id: name,
+        modelName: name,
+        modelCategory: primary.model.category,
+        modelImageUrl: primary.model.imageUrl,
+        currentStage: primary.currentStage,
+        stageStart: primary.stageStart,
+        stageLabel: STAGE_LABELS[primary.currentStage] ?? primary.currentStage,
+        deadline: primary.deadline,
+        deadlineDate: deadline,
+        overdue,
+        segments,
+        overallStart: segments[0]?.start ?? today,
+      };
+    });
+  }, [items, today]);
 
   const defaultRangeStart = useMemo(() => startOfMonth(subMonths(today, BACK_MONTHS)), [today]);
   const defaultRangeEnd = useMemo(() => endOfMonth(addMonths(today, FORWARD_MONTHS)), [today]);
@@ -247,17 +278,22 @@ export function GanttChart({ items }: GanttChartProps) {
                   });
 
                 // Snap each segment to whole week-cells (start's cell -> end's
-                // cell, both inclusive). Adjacent segments share their boundary
-                // date, which would otherwise make both claim the same cell -
-                // resolve that by letting the later segment win the contested
-                // cell, so segments sit flush with no gap or overlap.
+                // cell, both inclusive). Segments are chronologically sorted,
+                // but their cell ranges can still collide - either sharing a
+                // boundary date, or (for merged rows combining multiple items)
+                // genuinely starting in the same week. Either way, push each
+                // segment to start right after the previous one ends, so they
+                // always sit in strict left-to-right sequence with no overlap.
                 const cellRanges = bar.segments.map((segment) => ({
                   startIdx: cellIndexForDate(segment.start),
                   endIdx: cellIndexForDate(segment.end),
                 }));
                 for (let i = 1; i < cellRanges.length; i++) {
                   if (cellRanges[i].startIdx <= cellRanges[i - 1].endIdx) {
-                    cellRanges[i - 1].endIdx = Math.max(cellRanges[i - 1].startIdx, cellRanges[i].startIdx - 1);
+                    cellRanges[i].startIdx = cellRanges[i - 1].endIdx + 1;
+                    if (cellRanges[i].endIdx < cellRanges[i].startIdx) {
+                      cellRanges[i].endIdx = cellRanges[i].startIdx;
+                    }
                   }
                 }
 
