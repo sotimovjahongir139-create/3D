@@ -32,6 +32,19 @@ model ProductionModel {
   items     ProductionItem[]
 }
 
+// Uploaded image bytes live in Postgres, not the local filesystem. Production
+// runs behind multiple app instances/processes with separate local disks - a
+// file written to one instance's disk is invisible to a request served by
+// another, which made every "successful" upload 404 unpredictably. Every
+// instance already shares this same database, so storing bytes here is the
+// only storage that's actually consistent regardless of server topology.
+model UploadedImage {
+  id        String   @id @default(cuid())
+  data      Bytes
+  mimeType  String
+  createdAt DateTime @default(now())
+}
+
 model ProductionItem {
   id           String    @id @default(cuid())
   modelId      String
