@@ -21,6 +21,7 @@ type GanttChartProps = {
 };
 
 type Segment = { stage: string; start: Date; end: Date };
+type WeekCell = { start: Date; end: Date; offsetPx: number; widthPx: number };
 
 const UZ_MONTHS = [
   "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
@@ -36,7 +37,6 @@ const STAGE_BAR_COLOR: Record<string, string> = {
 const DAY_PX = 10;
 const STICKY_COL_PX = 200;
 const THUMB_SIZE = 26;
-const MIN_SEGMENT_PX = 3 * DAY_PX;
 const FALLBACK_DURATION_DAYS = 14; // used only when a stage has no deadline set yet
 const BACK_MONTHS = 1;
 const FORWARD_MONTHS = 3;
@@ -123,6 +123,33 @@ export function GanttChart({ items }: GanttChartProps) {
   const totalDays = differenceInCalendarDays(rangeEnd, rangeStart) + 1;
   const totalWidth = totalDays * DAY_PX;
   const todayOffsetPx = differenceInCalendarDays(today, rangeStart) * DAY_PX;
+
+  // Same week-cell partitioning as the header grid (months -> [7,7,7,week4] day
+  // groups), flattened into one array with each cell's pixel position. Bars snap
+  // to these cell boundaries instead of exact day offsets, so a bar's edges
+  // always land on a grid line like the header, never a fractional day/pixel.
+  const weekCells = useMemo(() => {
+    const cells: WeekCell[] = [];
+    let offsetPx = 0;
+    months.forEach((month) => {
+      let cursor = month.start;
+      month.weeks.forEach((days) => {
+        const end = addDays(cursor, days);
+        cells.push({ start: cursor, end, offsetPx, widthPx: days * DAY_PX });
+        offsetPx += days * DAY_PX;
+        cursor = end;
+      });
+    });
+    return cells;
+  }, [months]);
+
+  const cellIndexForDate = (date: Date): number => {
+    for (let i = 0; i < weekCells.length; i++) {
+      if (date >= weekCells[i].start && date < weekCells[i].end) return i;
+    }
+    if (weekCells.length === 0) return 0;
+    return date < weekCells[0].start ? 0 : weekCells.length - 1;
+  };
 
   // Vertical gridlines for the body rows, computed once (not per row): a strong
   // line at each month start, thin lines at the week subdivisions within it.
@@ -213,6 +240,21 @@ export function GanttChart({ items }: GanttChartProps) {
                     deadline: bar.deadline,
                   });
 
+                // Snap each segment to whole week-cells (start's cell -> end's
+                // cell, both inclusive). Adjacent segments share their boundary
+                // date, which would otherwise make both claim the same cell -
+                // resolve that by letting the later segment win the contested
+                // cell, so segments sit flush with no gap or overlap.
+                const cellRanges = bar.segments.map((segment) => ({
+                  startIdx: cellIndexForDate(segment.start),
+                  endIdx: cellIndexForDate(segment.end),
+                }));
+                for (let i = 1; i < cellRanges.length; i++) {
+                  if (cellRanges[i].startIdx <= cellRanges[i - 1].endIdx) {
+                    cellRanges[i - 1].endIdx = Math.max(cellRanges[i - 1].startIdx, cellRanges[i].startIdx - 1);
+                  }
+                }
+
                 return (
                   <div key={bar.id} className="flex items-center border-b border-ink/15 h-9 relative">
                     <button
@@ -230,11 +272,12 @@ export function GanttChart({ items }: GanttChartProps) {
                     </button>
                     <div className="relative h-full shrink-0" style={{ width: totalWidth }}>
                       {bar.segments.map((segment, si) => {
-                        const segOffsetPx = differenceInCalendarDays(segment.start, rangeStart) * DAY_PX;
-                        const segWidthPx = Math.max(
-                          differenceInCalendarDays(segment.end, segment.start) * DAY_PX,
-                          MIN_SEGMENT_PX
-                        );
+                        const { startIdx, endIdx } = cellRanges[si];
+                        const startCell = weekCells[startIdx];
+                        const endCell = weekCells[endIdx];
+                        if (!startCell || !endCell) return null;
+                        const segOffsetPx = startCell.offsetPx;
+                        const segWidthPx = endCell.offsetPx + endCell.widthPx - startCell.offsetPx;
                         const isLast = si === bar.segments.length - 1;
                         const overdueRing = isLast && bar.overdue ? "ring-inset ring-2 ring-ink/80" : "";
 
