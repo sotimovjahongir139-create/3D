@@ -13,7 +13,7 @@ type Item = {
   id: string;
   sampleSent: boolean;
   currentStage: string;
-  stageStart: string;
+  stageStart: string | null;
   deadline: string | null;
   model: { name: string; category: string | null; imageUrl: string | null };
 };

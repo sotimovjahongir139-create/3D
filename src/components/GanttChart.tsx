@@ -10,7 +10,7 @@ import { ModelDetailModal, type ModelDetail } from "@/components/ModelDetailModa
 type GanttItem = {
   id: string;
   currentStage: string;
-  stageStart: string;
+  stageStart: string | null;
   deadline: string | null;
   model: { name: string; category: string | null; imageUrl: string | null };
   logs: { stage: string; startDate: string; endDate: string }[];
@@ -59,13 +59,19 @@ export function GanttChart({ items }: GanttChartProps) {
             end: startOfDay(parseISO(log.endDate)),
           }));
 
-        const currentStart = startOfDay(parseISO(item.stageStart));
+        const explicitStart = item.stageStart ? startOfDay(parseISO(item.stageStart)) : null;
         const deadline = item.deadline ? startOfDay(parseISO(item.deadline)) : null;
         // Bars are a static planned schedule: width is fixed from start -> due date,
-        // computed once from the data, never recalculated against today.
-        const plannedEnd = deadline ?? addDays(currentStart, FALLBACK_DURATION_DAYS);
-        const currentEnd = plannedEnd > currentStart ? plannedEnd : addDays(currentStart, 1);
-        segments.push({ stage: item.currentStage, start: currentStart, end: currentEnd });
+        // computed once from the data, never recalculated against today. When there's
+        // no real start date, pin the segment to the due date itself rather than
+        // fabricating a start - that collapses it to a single compact week-cell
+        // instead of stretching from some arbitrary point to the due date.
+        const effectiveStart = explicitStart ?? deadline;
+        if (effectiveStart) {
+          const plannedEnd = deadline ?? addDays(effectiveStart, FALLBACK_DURATION_DAYS);
+          const currentEnd = plannedEnd > effectiveStart ? plannedEnd : addDays(effectiveStart, 1);
+          segments.push({ stage: item.currentStage, start: effectiveStart, end: currentEnd });
+        }
 
         const overdue = deadline ? today > deadline : false;
 
@@ -81,7 +87,7 @@ export function GanttChart({ items }: GanttChartProps) {
           deadlineDate: deadline,
           overdue,
           segments,
-          overallStart: segments[0].start,
+          overallStart: segments[0]?.start ?? today,
         };
       }),
     [items, today]

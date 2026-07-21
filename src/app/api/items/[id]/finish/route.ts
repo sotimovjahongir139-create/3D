@@ -34,7 +34,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       data: {
         productionItemId: item.id,
         stage: item.currentStage,
-        startDate: item.stageStart,
+        startDate: item.stageStart ?? item.createdAt,
         endDate: now,
         finishedById: user!.id,
       },

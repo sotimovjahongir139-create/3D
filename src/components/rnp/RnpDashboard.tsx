@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, Calendar } from "lucide-react";
+import { AlertTriangle, Calendar, RefreshCw } from "lucide-react";
 import type { RnpParsedData } from "@/lib/parseRnpData";
 import { RnpSection } from "@/components/rnp/RnpSection";
 
@@ -28,10 +28,15 @@ export function RnpDashboard() {
   const [data, setData] = useState<RnpParsedData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
+  // Always a fresh network call to /api/rnp, which itself is marked
+  // force-dynamic/no-store - never serves a cached response. Used for both
+  // the periodic poll and the manual refresh button, so a newly-added sheet
+  // row or section shows up on the very next call, no page reload needed.
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/rnp");
+      const res = await fetch("/api/rnp", { cache: "no-store" });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
         throw new Error(body?.error || "RNP ma'lumotlarini olishda xatolik yuz berdi");
@@ -51,6 +56,12 @@ export function RnpDashboard() {
     const interval = setInterval(load, REFRESH_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [load]);
+
+  async function handleManualRefresh() {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }
 
   if (loading) return <RnpSkeleton />;
 
@@ -76,15 +87,26 @@ export function RnpDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-2 text-sm text-ink/60">
-        <Calendar size={15} strokeWidth={2} />
-        {currentWeekLabel ? (
-          <span>
-            Joriy hafta: <span className="font-semibold text-ink">{currentWeekLabel}</span>
-          </span>
-        ) : (
-          <span>Joriy hafta aniqlanmadi</span>
-        )}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-sm text-ink/60">
+          <Calendar size={15} strokeWidth={2} />
+          {currentWeekLabel ? (
+            <span>
+              Joriy hafta: <span className="font-semibold text-ink">{currentWeekLabel}</span>
+            </span>
+          ) : (
+            <span>Joriy hafta aniqlanmadi</span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={handleManualRefresh}
+          disabled={refreshing}
+          className="flex items-center gap-1.5 rounded-full border border-ink/10 px-3 py-1.5 text-xs font-medium text-ink/60 hover:bg-bg disabled:opacity-60"
+        >
+          <RefreshCw size={13} strokeWidth={2} className={refreshing ? "animate-spin" : ""} />
+          Yangilash
+        </button>
       </div>
 
       <div className="space-y-4">

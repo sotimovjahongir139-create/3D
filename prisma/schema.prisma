@@ -37,7 +37,7 @@ model ProductionItem {
   modelId      String
   model        ProductionModel @relation(fields: [modelId], references: [id])
   currentStage Stage
-  stageStart   DateTime  @default(now())
+  stageStart   DateTime?
   deadline     DateTime?
   sampleSent   Boolean   @default(false)
   createdAt    DateTime  @default(now())

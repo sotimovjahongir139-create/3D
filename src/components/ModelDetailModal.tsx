@@ -13,7 +13,7 @@ export type ModelDetail = {
   category: string | null;
   imageUrl: string | null;
   currentStage: string;
-  stageStart: string;
+  stageStart: string | null;
   deadline: string | null;
 };
 
@@ -73,7 +73,9 @@ export function ModelDetailModal({ detail, onClose }: { detail: ModelDetail | nu
             </div>
             <div className="flex items-center justify-between">
               <span className="text-ink/50">Boshlangan sana</span>
-              <span className="text-ink font-medium">{format(new Date(detail.stageStart), "dd.MM.yyyy")}</span>
+              <span className="text-ink font-medium">
+                {detail.stageStart ? format(new Date(detail.stageStart), "dd.MM.yyyy") : "—"}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-ink/50">Muddat</span>

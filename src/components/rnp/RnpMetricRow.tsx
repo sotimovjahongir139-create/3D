@@ -65,8 +65,8 @@ export function RnpMetricRow({ row }: { row: RnpMetricRowData }) {
       {row.weeks.map((week, i) => (
         <td key={i} className="px-3 py-3">
           <div className="flex items-center justify-end gap-3 whitespace-nowrap">
-            <span className="text-xs text-ink/50">{formatValue(week.reja)}</span>
-            <span className="text-sm font-semibold text-ink">{formatValue(week.fakt)}</span>
+            <span className="text-xs font-medium text-ink/60">{formatValue(week.reja)}</span>
+            <span className="text-xs font-medium text-ink">{formatValue(week.fakt)}</span>
             <RatioBadge ratio={week.ratio} />
           </div>
         </td>

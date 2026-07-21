@@ -12,7 +12,7 @@ import { itemStatus } from "@/lib/labels";
 type Item = {
   id: string;
   currentStage: string;
-  stageStart: string;
+  stageStart: string | null;
   deadline: string | null;
   model: { name: string; category: string | null; imageUrl: string | null };
 };
@@ -114,7 +114,9 @@ export function DepartmentQueue({ stage }: { stage: "3d" | "mold" }) {
                       </div>
                     </button>
                   </td>
-                  <td className="px-5 py-3 text-ink/70">{format(new Date(item.stageStart), "dd.MM.yyyy")}</td>
+                  <td className="px-5 py-3 text-ink/70">
+                    {item.stageStart ? format(new Date(item.stageStart), "dd.MM.yyyy") : "—"}
+                  </td>
                   <td className="px-5 py-3 text-ink/70">
                     {item.deadline ? format(new Date(item.deadline), "dd.MM.yyyy") : "—"}
                   </td>

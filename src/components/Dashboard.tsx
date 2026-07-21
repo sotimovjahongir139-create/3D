@@ -12,7 +12,7 @@ import { STAGE_META } from "@/lib/stageMeta";
 type GanttItemRow = {
   id: string;
   currentStage: string;
-  stageStart: string;
+  stageStart: string | null;
   deadline: string | null;
   model: { name: string; category: string | null; imageUrl: string | null };
   logs: { stage: string; startDate: string; endDate: string }[];

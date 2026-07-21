@@ -14,7 +14,7 @@ import { itemStatus } from "@/lib/labels";
 type ModelItem = {
   id: string;
   currentStage: string;
-  stageStart: string;
+  stageStart: string | null;
   deadline: string | null;
 };
 
@@ -375,7 +375,9 @@ export function AdminModels() {
                   <td className="px-5 py-3">
                     <StageBadge stage={item.currentStage} />
                   </td>
-                  <td className="px-5 py-3 text-ink/70">{format(new Date(item.stageStart), "dd.MM.yyyy")}</td>
+                  <td className="px-5 py-3 text-ink/70">
+                    {item.stageStart ? format(new Date(item.stageStart), "dd.MM.yyyy") : "—"}
+                  </td>
                   <td className="px-5 py-3 text-ink/70">
                     {item.deadline ? format(new Date(item.deadline), "dd.MM.yyyy") : "—"}
                   </td>

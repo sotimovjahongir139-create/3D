@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
       items: {
         create: {
           currentStage: stage as never,
-          stageStart: body.stageStart ? new Date(body.stageStart) : new Date(),
+          stageStart: body.stageStart ? new Date(body.stageStart) : null,
           deadline: body.deadline ? new Date(body.deadline) : null,
         },
       },
